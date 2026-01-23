@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KPI Dashboard v9.2 (Auth Protected)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* === THEME VARIABLES === */
+    body.theme-dark, .theme-dark {
+      --bg-body:#050505; --bg-card:#141414; --bg-header:#1F1F1F; --bg-hover:#262626;
+      --tx-main:#FFFFFF; --tx-sec:#9CA3AF; --tx-accent:#3B82F6;
+      --bd-color:#333333; --bd-gap:#050505; --total-bg:#1A1A1A; --badge-bg:#262626;
+      --modal-bg: #1A1A1A; --modal-overlay: rgba(0,0,0,0.85);
+      --chart-grid: rgba(255,255,255,0.05);
+    }
+    body.theme-light, .theme-light {
+      --bg-body:#F2F4F7; --bg-card:#FFFFFF; --bg-header:#F9FAFB; --bg-hover:#F3F4F6;
+      --tx-main:#101828; --tx-sec:#667085; --tx-accent:#007AFF;
+      --bd-color:#EAECF0; --bd-gap:#F2F4F7; --total-bg:#F9FAFB; --badge-bg:#F2F4F7;
+      --modal-bg: #FFFFFF; --modal-overlay: rgba(0,0,0,0.6);
+      --chart-grid: rgba(0,0,0,0.05);
+    }
+
+    /* === MAIN LAYOUT === */
+    body { margin: 0; overflow-x: hidden; background: #050505; font-family:'Inter',-apple-system,sans-serif; }
+    .t-kpi-wrapper {
+      font-family:'Inter',-apple-system,sans-serif; background:var(--bg-body); color:var(--tx-main);
+      padding:40px 20px; box-sizing:border-box; width:100%; min-height:100vh; transition:.3s;
+    }
+    .t-kpi-container { max-width:1400px; margin:0 auto; }
+
+    /* HEADER */
+    .kpi-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:20px; }
+    .header-title h1 { font-size:28px; font-weight:800; margin:0; letter-spacing:-.02em; }
+    .controls-right { display:flex; gap:12px; align-items:center; }
+
+    .theme-btn {
+      background:var(--bg-card); border:1px solid var(--bd-color); color:var(--tx-sec);
+      width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px;
+    }
+    .save-status {
+      background:var(--bg-card); border:1px solid var(--bd-color); padding:8px 16px; border-radius:99px;
+      font-size:13px; font-weight:600; color:var(--tx-sec); display:flex; align-items:center; gap:8px;
+    }
+    .status-dot { width:8px; height:8px; border-radius:50%; background:var(--tx-sec); }
+    .save-status.online .status-dot { background:#10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+    
+    /* TABS */
+    .kpi-tabs { background:var(--bg-card); padding:4px; border-radius:12px; display:inline-flex; gap:2px; border:1px solid var(--bd-color); }
+    .kpi-tab-btn { padding:8px 24px; border:none; background:transparent; font-size:14px; font-weight:600; color:var(--tx-sec); border-radius:8px; cursor:pointer; transition:.2s; }
+    .kpi-tab-btn.active { background:var(--bg-hover); color:var(--tx-main); box-shadow:0 2px 4px rgba(0,0,0,.05); }
+    .kpi-content { display:none; animation:fadeIn .4s ease; }
+    .kpi-content.active { display:block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    /* CARDS */
+    .bento-card { background:var(--bg-card); border-radius:24px; padding:24px; margin-bottom:40px; border:1px solid var(--bd-color); box-shadow:0 4px 20px rgba(0,0,0,.05); }
+    .month-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
+    .month-title { font-size:22px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px; }
+
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom: 25px; }
+    .stat-box { background:var(--bg-hover); border-radius:16px; padding:14px; border:1px solid var(--bd-color); display:flex; flex-direction:column; }
+    .stat-label { font-size:11px; text-transform:uppercase; color:var(--tx-sec); font-weight:700; margin-bottom:6px; letter-spacing:.05em; }
+    .stat-val { font-size:18px; font-weight:700; color:var(--tx-main); }
+    .stat-sub { font-size:11px; color:var(--tx-sec); margin-top:4px; }
+    .accent-text { color:var(--tx-accent); }
+    .forecast { background:rgba(59,130,246,.1); border-color:rgba(59,130,246,.2); }
+    .forecast .stat-val { color:var(--tx-accent); }
+
+.mini-plan { opacity: 0.5; font-weight: 400; font-size: 0.9em; margin-left: 3px; }
+.mini-perc { margin-left: 6px; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; display: inline-block; vertical-align: middle; }
+.mini-perc.good { color: #30D158; background: rgba(48,209,88,0.15); }
+.mini-perc.bad { color: #FF453A; background: rgba(255,69,58,0.15); }
+.mini-perc.warning { color: #FFD60A; background: rgba(255,214,10,0.15); }
+    
+    /* OVERVIEW SPECIFIC */
+    .trend-good { color: #30D158; font-weight: 700; }
+    .trend-warning { color: #FFD60A; font-weight: 700; }
+    .trend-bad { color: #FF453A; font-weight: 700; }
+    
+    .chart-grid-layout { display:grid; grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)); gap:20px; }
+    .chart-container { position: relative; height: 300px; width: 100%; }
+
+    .kpi-btn { background:var(--bg-hover); color:var(--tx-main); border:1px solid var(--bd-color); padding:8px 16px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition: .2s; }
+    .kpi-btn:hover { border-color:var(--tx-sec); }
+
+    .btn-delete { color:#FF453A; border-color:rgba(255,69,58,.3); }
+    .btn-delete:hover { border-color:#FF453A; background:rgba(255,69,58,.05); }
+
+    /* TABLE STYLES */
+    .cell-input { width:100%; border:none; background:transparent; text-align:center; font-family:'Inter',monospace; font-size:13px; color:var(--tx-main); padding:8px 0; }
+    .cell-input:focus { background:var(--bg-hover); border-radius:6px; outline:1px solid var(--tx-accent); }
+    .cell-input:hover { background:var(--bg-hover); border-radius:6px; }
+    .cell-input::placeholder { color:var(--bd-color); }
+
+    .channel-bento-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:14px; }
+    .smm-stack-grid { display:flex; flex-direction:column; gap:20px; }
+
+    .channel-card { background:var(--bg-hover); border:1px solid var(--bd-color); border-radius:18px; padding:12px; display:flex; flex-direction:column; gap:10px; box-shadow:0 4px 16px rgba(0,0,0,.04); overflow: hidden; }
+    .channel-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .channel-name { font-size:16px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; line-height:1.1; }
+    .delete-ch-btn { color:#FF453A; cursor:pointer; opacity:.35; margin-left:6px; font-size:16px; transition:.2s; line-height:1; user-select:none; }
+    .channel-card:hover .delete-ch-btn { opacity:1; }
+    
+    .add-metric-btn { color:var(--tx-accent); cursor:pointer; font-size:11px; margin-left:10px; font-weight:600; background:rgba(59,130,246,0.1); padding:2px 8px; border-radius:6px; opacity:0.6; transition:.2s; }
+    .add-metric-btn:hover { opacity:1; }
+
+    .mini-grid { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .mini-chip { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); padding:6px 10px; border-radius:999px; font-size:11px; color:var(--tx-sec); font-weight:700; white-space:nowrap; }
+    .mini-chip strong { color:var(--tx-main); font-weight:800; }
+    .mini-chip .accent { color:var(--tx-accent); }
+
+    .channel-table-wrap { width:100%; overflow-x:auto; border-radius:14px; border:1px solid var(--bd-color); background:var(--bg-card); -webkit-overflow-scrolling:touch; }
+    .channel-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; min-width:400px; }
+    .channel-table th, .channel-table td { border-bottom:1px solid var(--bd-color); border-right:1px solid var(--bd-color); height:40px; padding:0 6px; vertical-align:middle; text-align:center; font-size:12px; color:var(--tx-main); white-space:nowrap; }
+    .channel-table tr>*:last-child { border-right:none; } .channel-table tr:last-child>* { border-bottom:none; }
+    .channel-table th { background:var(--bg-header); color:var(--tx-sec); font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:.03em; position:relative; }
+    
+    .del-col-btn {
+        position:absolute; top:2px; right:2px; width:14px; height:14px;
+        color:#FF453A; cursor:pointer; opacity:0; font-size:14px; line-height:14px; font-weight:bold;
+        transition:.1s; border-radius:3px;
+    }
+    .channel-table th:hover .del-col-btn { opacity:0.5; }
+    .del-col-btn:hover { opacity:1!important; background:rgba(255,69,58,0.2); }
+
+    .col-type { width:70px; min-width:70px; }
+    .col-sticky-1 { width:90px; min-width:90px; position:sticky; left:0; z-index:20; background:var(--bg-hover); padding:0 8px!important; border-right:1px solid var(--bd-color)!important; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+    th.col-sticky-1 { z-index:35; background:var(--bg-header); }
+    .channel-table td:not(.col-sticky-1):not(.col-type) { min-width:90px; }
+
+    .week-header-inner { display:flex; align-items:center; gap:4px; width:100%; }
+    .tree-toggle-btn { background:transparent; border:none; color:var(--tx-sec); cursor:pointer; font-size:14px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:.2s; padding:0; }
+    .tree-toggle-btn:hover { background:var(--bg-hover); color:var(--tx-main); }
+    .week-title-text { flex-grow:1; font-weight:700; font-size:12px; outline:none; border-radius:4px; padding:2px 4px; text-align:left; }
+    .week-title-text:focus { background:var(--bg-hover); box-shadow:0 0 0 1px var(--tx-accent); }
+
+    .days-icon-btn { background:transparent; border:1px solid transparent; color:var(--tx-sec); cursor:pointer; border-radius:4px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; opacity:0.4; transition:.2s; margin-left:auto; }
+    .days-icon-btn:hover { opacity:1; background:var(--bg-hover); color:var(--tx-main); }
+    .days-icon-btn.active { color:var(--tx-accent); opacity:1; background:rgba(59,130,246,0.1); }
+    .icon-bars { display:block; width:12px; height:10px; background:linear-gradient(to bottom,currentColor 2px,transparent 2px,transparent 4px,currentColor 4px,transparent 6px,transparent 8px,currentColor 8px); }
+
+    .week-collapsed { display:none; }
+    .day-row { display:none; background:rgba(0,0,0,0.02); } .theme-dark .day-row { background:rgba(255,255,255,0.02); }
+    .day-row.active { display:table-row; animation:fadeIn 0.3s ease; }
+    .day-label-cell { padding-right:15px!important; font-size:11px; color:var(--tx-sec); font-family:monospace; }
+    .day-name { color:var(--tx-accent); font-weight:700; margin-right:4px; }
+
+    .smart-input-bad { color:#FF453A!important; font-weight:800; }
+    .smart-input-good { color:#30D158!important; font-weight:800; }
+    .day-cpl-bad { color:#FF453A; font-weight:700; }
+    .day-cpl-good { color:#30D158; font-weight:700; }
+    .day-cpl-neutral { opacity:0.5; }
+    .cpl-cell { opacity:.78; font-weight:900; }
+
+    .badge { display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; min-width:40px; }
+    .badge-neutral { color:var(--tx-sec); background:var(--badge-bg); }
+    .badge-good { color:#30D158; background:rgba(48,209,88,.1); }
+    .badge-bad { color:#FF453A; background:rgba(255,69,58,.1); }
+
+    .total-card { background:var(--total-bg); border-color:rgba(255,255,255,.06); }
+    .total-card .channel-table-wrap { background:var(--total-bg); }
+    .total-card .channel-name { color:var(--tx-main); }
+    .row-spacer td { height:14px; background:var(--bd-gap); border:none!important; padding:0!important; }
+    .total-card .col-sticky-1 { background: var(--total-bg); }
+
+    /* === MODAL (FIXED) === */
+    .modal-backdrop {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: var(--modal-overlay);
+        backdrop-filter: blur(5px);
+        z-index: 999999;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity .2s ease;
+        padding: 18px;
+        box-sizing: border-box;
+    }
+    .modal-backdrop.active { opacity: 1; pointer-events: all; }
+
+    .modal-content {
+        background: var(--modal-bg);
+        font-family:'Inter',-apple-system,sans-serif;
+        width: 90%; max-width: 520px;
+        max-height: calc(100vh - 60px);
+        padding: 30px; border-radius: 20px;
+        border: 1px solid var(--bd-color);
+        box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        display: flex; flex-direction: column; gap: 18px;
+        position: relative;
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .modal-title { font-size: 20px; font-weight: 800; margin: 0; color: var(--tx-main); }
+    .modal-field { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .modal-field label { font-size: 11px; font-weight: 700; color: var(--tx-sec); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .modal-input {
+        background: var(--bg-hover); border: 1px solid var(--bd-color);
+        padding: 14px; border-radius: 12px; color: var(--tx-main);
+        font-size: 15px; outline: none; transition: .2s;
+        font-weight: 500;
+    }
+    .modal-input:focus { border-color: var(--tx-accent); background: var(--bg-card); }
+    .modal-input::placeholder { color: var(--tx-sec); opacity: 0.7; }
+
+    .metrics-list {
+        flex: 1; min-height: 0;
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        max-height: 250px; overflow-y: auto; padding: 8px;
+        scrollbar-width: thin; scrollbar-color: var(--tx-sec) var(--bg-hover);
+        border: 1px solid var(--bd-color); border-radius: 12px;
+        background: var(--bg-body); box-sizing: border-box;
+    }
+
+    .checkbox-item {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 13px; font-weight: 600; cursor: pointer;
+        padding: 10px; border-radius: 8px; transition: .1s;
+        color: var(--tx-main); user-select: none;
+    }
+    .checkbox-item:hover { background: var(--bg-hover); }
+    .checkbox-item input { accent-color: var(--tx-accent); width: 16px; height: 16px; cursor: pointer; }
+
+    .modal-actions { display: flex; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd-color); }
+    .modal-btn { flex: 1; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; border: none; font-size: 14px; transition: .2s; }
+    .modal-btn:active { transform: scale(0.98); }
+
+    .btn-cancel { background: transparent; border: 1px solid var(--bd-color); color: var(--tx-sec); }
+    .btn-cancel:hover { border-color: var(--tx-main); color: var(--tx-main); }
+    .btn-save { background: var(--tx-accent); color: white; }
+    .btn-save:hover { background: #2563EB; }
+
+    @media (max-width:768px){
+      .t-kpi-wrapper { padding:10px 10px; }
+      .bento-card { padding:15px; border-radius:16px; margin-bottom:20px; }
+      .kpi-header { flex-direction:column; align-items:stretch; gap:15px; }
+      .header-title h1 { font-size:24px; text-align:center; }
+      .kpi-tabs { width:100%; display:flex; } .kpi-tab-btn { flex:1; text-align:center; }
+      .controls-right { justify-content:space-between; margin-top:5px; }
+      .stats-grid { grid-template-columns:1fr 1fr; gap:8px; }
+      .channel-bento-grid { grid-template-columns:1fr; gap:20px; }
+      .col-sticky-1 { background:var(--bg-hover); } .total-card .col-sticky-1 { background:var(--total-bg); }
+      .channel-table th,.channel-table td { padding:0 4px; font-size:11px; }
+      .cell-input { font-size:12px; }
+      .chart-grid-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width:520px){
+      .modal-content { width: 92%; padding: 18px; border-radius: 18px; }
+      .metrics-list { grid-template-columns: 1fr; max-height: 52vh; }
+      .modal-actions { gap: 10px; }
+    }
+    
+    @media (max-width: 768px) {
+      .channel-table th{
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        hyphens: auto; line-height: 1.15;
+        height: auto !important; padding: 8px 6px !important;
+        vertical-align: middle;
+      }
+      .channel-table td{ white-space: nowrap !important; }
+      .channel-table{ table-layout: auto !important; min-width: unset !important; }
+      .col-sticky-1 { width: 92px !important; min-width: 92px !important; }
+      .col-type        { width: 60px !important; min-width: 60px !important; }
+    }
+    /* Кнопка входа Google */
+.google-login-btn {
+    background: #4285F4;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif; /* Шрифт Google, если есть, или дефолтный */
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    text-transform: none;
+}
+
+.google-login-btn:hover {
+    background: #3367D6;
+    box-shadow: 0 10px 15px rgba(66, 133, 244, 0.3);
+    transform: translateY(-2px);
+}
+
+.google-login-btn:active {
+    transform: translateY(0);
+}
+
+/* Белый контейнер для логотипа G */
+.g-icon-wrapper {
+    background: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+</head>
+<body class="theme-dark">
+
+<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-body); z-index:999999; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px; transition:0.3s;">
+    <div class="bento-card" style="text-align:center; max-width:400px; padding:40px;">
+        <h2 style="margin-top:0;">Доступ ограничен</h2>
+        <p style="color:var(--tx-sec); margin-bottom:25px;">Войдите через Google аккаунт, чтобы просматривать и редактировать KPI.</p>
+
+        <button id="googleLoginBtn" onclick="googleLogin()" class="google-login-btn">
+            <div class="g-icon-wrapper">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path d="M17.64 9.2c0-.637-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"></path>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.715H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"></path>
+                    <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"></path>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.159 6.656 3.58 9 3.58z" fill="#EA4335"></path>
+                </svg>
+            </div>
+            <span id="googleLoginText">Войти через Google</span>
+        </button>
+
+        <p id="loginError" style="color:#FF453A; font-size:13px; margin-top:15px; display:none;"></p>
+        
+        <div id="userEmailDisplay" style="color:var(--tx-accent); font-weight:bold; font-size:13px; margin-top:10px;"></div>
+        <button id="wrongAccLogout" onclick="googleLogout()" class="kpi-btn btn-delete" style="display:none; margin-top:10px;">Выйти и сменить аккаунт</button>
+    </div>
+</div>
+
+<div class="t-kpi-wrapper theme-dark" id="kpiRoot">
+  <div class="t-kpi-container">
+
+    <div class="kpi-header">
+      <div class="header-title"><h1>KPI Marketing Dashboard</h1></div>
+      <div class="kpi-tabs">
+        <button class="kpi-tab-btn" onclick="openTab('overview', this)">Обзор KPI</button>
+        <button class="kpi-tab-btn active" onclick="openTab('traffic', this)">Traffic</button>
+        <button class="kpi-tab-btn" onclick="openTab('smm', this)">SMM</button>
+      </div>
+      <div class="controls-right">
+        
+        <button class="theme-btn" onclick="googleLogout()" title="Выйти" style="margin-right:10px;">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+             </svg>
+        </button>
+
+        <button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Сменить тему">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+
+        <div class="save-status" id="saveStatus">
+          <div class="status-dot"></div><span id="statusText">Ожидание...</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="traffic" class="kpi-content active">
+      <div style="margin-bottom:20px;display:flex;justify-content:flex-end;">
+        <button class="kpi-btn" onclick="addNewMonth()">
+          <span style="font-size:16px;">+</span> Новый месяц
+        </button>
+      </div>
+      <div id="trafficContainer"></div>
+    </div>
+
+    <div id="smm" class="kpi-content">
+      <div style="margin-bottom:20px;display:flex;justify-content:flex-end;">
+          <button class="kpi-btn" onclick="addNewMonth()">
+            <span style="font-size:16px;">+</span> Новый месяц
+          </button>
+      </div>
+      <div id="smmContainer"></div>
+    </div>
+
+    <div id="overview" class="kpi-content">
+        <div class="bento-card">
+            <div class="month-header">
+               <div class="month-title">Сводка: <span id="ov_current_month_name" style="color:var(--tx-accent); margin-left:8px;">Нет данных</span></div>
+            </div>
+            
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                <div class="stat-box">
+                    <div class="stat-label">Трафик: Расход</div>
+                    <div class="stat-val" id="ov_curr_spend">-</div>
+                    <div class="stat-sub" id="ov_curr_spend_plan">План: -</div>
+                    <div class="stat-sub" id="ov_curr_spend_perc" style="margin-top:6px; font-size:12px;"></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Трафик: Лиды A+B</div>
+                    <div class="stat-val accent-text" id="ov_curr_leads">-</div>
+                      <div class="stat-sub" id="ov_curr_leads_plan">План: -</div>
+                      <div class="stat-sub" id="ov_curr_leads_perc" style="margin-top:6px; font-size:12px;"></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Трафик: CPL A+B</div>
+                    <div class="stat-val" id="ov_curr_cpl">-</div>
+                    <div class="stat-sub" id="ov_curr_cpl_perc">-</div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">SMM: Лиды</div>
+                    <div class="stat-val accent-text" id="ov_curr_smm_leads">-</div>
+                    <div class="stat-sub" id="ov_curr_smm_leads_plan">План: -</div>
+                    <div class="stat-sub" id="ov_curr_smm_leads_perc" style="margin-top:6px; font-size:12px;"></div>
+                </div>
+                 <div class="stat-box">
+                    <div class="stat-label">SMM: Чистый приток</div>
+                    <div class="stat-val" id="ov_curr_smm_subs">-</div>
+                    <div class="stat-sub" id="ov_curr_smm_subs_plan">План: -</div>
+                    <div class="stat-sub" id="ov_curr_smm_subs_perc" style="margin-top:6px; font-size:12px;"></div>
+                </div>
+                 <div class="stat-box">
+                    <div class="stat-label">SMM: Охват</div>
+                    <div class="stat-val" id="ov_curr_smm_reach">-</div>
+                    <div class="stat-sub" id="ov_curr_smm_reach_plan">План: -</div>
+                    <div class="stat-sub" id="ov_curr_smm_reach_perc" style="margin-top:6px; font-size:12px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-grid-layout">
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Расход (₽)</div>
+                <div class="chart-container">
+                    <canvas id="chartTrafficSpend"></canvas>
+                </div>
+            </div>
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Лиды A+B (шт)</div>
+                <div class="chart-container">
+                    <canvas id="chartTrafficLeads"></canvas>
+                </div>
+            </div>
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: CPL A+B (₽)</div>
+                <div class="chart-container">
+                    <canvas id="chartCPL"></canvas>
+                </div>
+            </div>
+            
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Лиды (шт)</div>
+                <div class="chart-container">
+                    <canvas id="chartSMMLeads"></canvas>
+                </div>
+            </div>
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Чистый приток (чел)</div>
+                <div class="chart-container">
+                    <canvas id="chartSMMSubs"></canvas>
+                </div>
+            </div>
+            <div class="bento-card">
+                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Охват</div>
+                <div class="chart-container">
+                    <canvas id="chartSMMReach"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="smmModalBackdrop" class="modal-backdrop">
+    <div class="modal-content">
+        <h3 class="modal-title">Добавить SMM канал</h3>
+        <div class="modal-field">
+            <label>Название канала</label>
+            <input type="text" id="modalSmmName" class="modal-input" placeholder="Например: TikTok">
+        </div>
+        <div class="modal-field">
+            <label>Выберите метрики</label>
+            <div class="metrics-list" id="modalSmmMetrics"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn btn-cancel" onclick="closeSmmModal()">Отмена</button>
+            <button class="modal-btn btn-save" onclick="confirmAddSmmChannel()">Добавить</button>
+        </div>
+    </div>
+</div>
+
+<div id="addMetricBackdrop" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3 class="modal-title">Добавить метрику</h3>
+        <div class="modal-field">
+            <label>Выберите из списка</label>
+            <div class="metrics-list" id="addMetricList"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="modal-btn btn-cancel" onclick="closeAddMetricModal()">Отмена</button>
+            <button class="modal-btn btn-save" onclick="confirmAddMetric()">Добавить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+  // ==========================================
+  // 1. CONFIG & FIREBASE INIT (AUTH ENABLED)
+  // ==========================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyCAq7GpfFe8nI8KeiRSOyjw8VAmITMgS-w",
+    authDomain: "kpi-marketing-dashboard.firebaseapp.com",
+    databaseURL: "https://kpi-marketing-dashboard-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "kpi-marketing-dashboard",
+    storageBucket: "kpi-marketing-dashboard.firebasestorage.app",
+    messagingSenderId: "1097131516280",
+    appId: "1:1097131516280:web:84ed4bb71be34ccbf8e88d"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.app().database("https://kpi-marketing-dashboard-default-rtdb.europe-west1.firebasedatabase.app");
+  const auth = firebase.auth(); // ИНИЦИАЛИЗАЦИЯ AUTH
+
+  const AVAILABLE_METRICS = [
+      "Охват", "Посещения профиля", "Чистый приток подписчиков",
+      "Клики по ссылке", "Лиды", "ERR",
+      "Просмотры постов", "Показы", "% Дочитывания и просмотров", "Кол-во реакций"
+  ];
+
+  const DEFAULT_SMM_SETUP = [
+    { name: 'Instagram', metrics: ['Охват', 'Посещения профиля', 'Чистый приток подписчиков', 'Клики по ссылке', 'Лиды', 'ERR'] },
+    { name: 'Telegram', metrics: ['Просмотры постов', 'Чистый приток подписчиков', 'Лиды', 'ERR'] },
+    { name: 'VK', metrics: ['Охват', 'Посещения профиля', 'Чистый приток подписчиков', 'Лиды', 'ERR'] },
+    { name: 'Dzen', metrics: ['Показы', '% Дочитывания и просмотров', 'Кол-во реакций', 'Чистый приток подписчиков'] }
+  ];
+
+  let monthsData = [];
+  let inputState = {};
+  let isDark = true;
+  let activeSmmModalMonthIndex = -1;
+  let activeAddMetricMonth = -1;
+  let activeAddMetricChannel = -1;
+  let chartInstances = {};
+
+  const NF = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+  const NFP = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
+
+  // ==========================================
+  // 2. AUTH LOGIC
+  // ==========================================
+function googleLogin() {
+      const btn = document.getElementById('googleLoginBtn');
+      const btnText = document.getElementById('googleLoginText');
+      const errEl = document.getElementById('loginError');
+      
+      // 1. Блокируем кнопку и меняем текст
+      if(btn) {
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.style.cursor = 'not-allowed';
+      }
+      if(btnText) btnText.innerText = "Загрузка...";
+      if(errEl) errEl.style.display = 'none';
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      
+      // Чтобы избежать проблем с двойным попапом, можно использовать 
+      // setCustomParameters({ prompt: 'select_account' }) если нужно, 
+      // но блокировка кнопки решает 99% проблем.
+      
+      auth.signInWithPopup(provider)
+          .catch((error) => {
+              // 2. Если ошибка - возвращаем кнопку в исходное состояние
+              if(btn) {
+                  btn.disabled = false;
+                  btn.style.opacity = '1';
+                  btn.style.cursor = 'pointer';
+              }
+              if(btnText) btnText.innerText = "Войти через Google";
+
+              // Игнорируем ошибку закрытия окна (пользователь сам закрыл)
+              if (error.code === 'auth/popup-closed-by-user') {
+                  return;
+              }
+              // Игнорируем ошибку двойного клика (на всякий случай)
+              if (error.code === 'auth/cancelled-popup-request') {
+                  return;
+              }
+
+              // Показываем остальные ошибки
+              if(errEl) {
+                  errEl.style.display = 'block';
+                  errEl.innerText = "Ошибка: " + error.message;
+              }
+          });
+  }
+
+  function googleLogout() {
+      if(confirm("Выйти из аккаунта?")) {
+          auth.signOut().then(() => {
+              window.location.reload();
+          });
+      }
+  }
+
+  // ==========================================
+  // 3. HELPERS
+  // ==========================================
+  function parseNumberLike(val){ if(val==null) return 0; const s=String(val).replace(/[^\d-]/g,''); const n=parseInt(s,10); return Number.isFinite(n)?n:0; }
+  function parsePercentLike(val){ if(val==null) return 0; const s=String(val).replace(',', '.').replace(/[^\d.\-]/g,''); const n=parseFloat(s); return Number.isFinite(n)?n:0; }
+function formatMoney(n) {
+      // Если n это null, undefined или пустая строка — возвращаем пустоту (прочерк будет placeholder-ом)
+      if (n === null || n === undefined || n === '') return "";
+      n = Number(n);
+      if (isNaN(n)) return "";
+      
+      // Если это ноль — пишем 0 ₽
+      if (n === 0) return "0 ₽";
+      
+      // Иначе форматируем как обычно
+      return `${NF.format(n)} ₽`;
+  }
+function formatCount(n) {
+      if (n === null || n === undefined || n === '') return "";
+      n = Number(n);
+      if (isNaN(n)) return "";
+      
+      if (n === 0) return "0";
+      
+      return NF.format(n);
+  }
+  function formatPercent(n){ n=parsePercentLike(n); if(!Number.isFinite(n)) return ""; return (Number.isInteger(n)?NFP.format(n):NFP.format(n)) + "%"; }
+  function isPercentMetric(name){ const s=(name||"").toString().trim(); return s==="ERR" || s.includes("%") || s.toLowerCase().includes("err"); }
+function formatCount(n) {
+      if (n === null || n === undefined || n === '') return "";
+      n = Number(n);
+      if (isNaN(n)) return "";
+      
+      if (n === 0) return "0";
+      
+      return NF.format(n);
+  }
+  function fRub(n){ 
+      // Тут оставляем логику: если 0, то показываем "-", если число — показываем рубли
+      // Если вы хотите видеть 0 в сводке, замените 'return n===0 ...' на 'return (NF.format(n) + " ₽");'
+      n = +n || 0; 
+      return n===0 ? "-" : (NF.format(n) + " ₽"); 
+  }
+function fCount(n){ 
+      n = +n || 0; 
+      return n===0 ? "-" : NF.format(n); 
+  }
+  function toggleTheme(){
+    isDark = !isDark;
+    document.body.className = isDark ? 'theme-dark' : 'theme-light';
+    document.getElementById('kpiRoot').className = isDark ? 't-kpi-wrapper theme-dark' : 't-kpi-wrapper theme-light';
+    
+    const btn = document.getElementById('themeToggleBtn');
+    if(btn) {
+        if(isDark) {
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+        } else {
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+        }
+    }
+    if(document.getElementById('overview').classList.contains('active')) renderOverview();
+  }
+
+  function openTab(t, btn){
+    document.querySelectorAll('.kpi-content').forEach(e => e.classList.remove('active'));
+    document.querySelectorAll('.kpi-tab-btn').forEach(e => e.classList.remove('active'));
+    document.getElementById(t).classList.add('active');
+    btn.classList.add('active');
+    if(t === 'overview') renderOverview();
+  }
+
+  function applyResponsiveTableWidths() {
+    if (window.innerWidth > 768) return;
+    document.querySelectorAll('.channel-table').forEach(table => {
+      const ths = table.querySelectorAll('thead th');
+      if (!ths || ths.length === 0) return;
+      const totalCols = ths.length;
+      const stickyW = 92; const typeW = 60; const metricCols = Math.max(0, totalCols - 2);
+      const metricW = 120;
+      const minW = stickyW + typeW + metricCols * metricW;
+      table.style.minWidth = `${minW}px`;
+    });
+  }
+
+  function _smartRenderList(containerId, itemsData, prefix, htmlGenerator) {
+    const container = document.getElementById(containerId);
+    const count = itemsData.length;
+    for (let i = 0; i < count; i++) {
+      const blockId = `${prefix}_block_${i}`;
+      const newHTML = htmlGenerator(itemsData[i], i);
+      let block = document.getElementById(blockId);
+      if (!block) {
+        block = document.createElement('div');
+        block.className = 'bento-card';
+        block.id = blockId;
+        block.innerHTML = newHTML;
+        container.appendChild(block);
+      } else {
+        if (block.innerHTML !== newHTML) {
+            const active = document.activeElement;
+            const activeId = active ? active.id : null;
+            const selStart = active ? active.selectionStart : 0;
+            block.innerHTML = newHTML;
+            if(activeId) {
+                const newActive = document.getElementById(activeId);
+                if(newActive) {
+                    newActive.focus();
+                    try { newActive.setSelectionRange(selStart, selStart); } catch(e){}
+                }
+            }
+        }
+      }
+    }
+    const children = Array.from(container.children);
+    children.forEach(child => {
+      if(child.id && child.id.startsWith(prefix) && child.id.includes('_block_')) {
+         const idx = parseInt(child.id.split('_block_')[1]);
+         if(idx >= count) child.remove();
+      }
+    });
+    applyResponsiveTableWidths();
+  }
+
+  function slugify(text) {
+    return btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+  }
+  // Хелпер: ищем метрику, отвечающую за "Охват" (включая Показы или Просмотры)
+function findReachMetricName(metrics) {
+    return metrics.find(m => {
+        const l = m.toLowerCase();
+        return l.includes('охват') || l.includes('показы') || l.includes('просмотры');
+    });
+}
+
+// Хелпер: ищем метрику "ERR"
+function findErrMetricName(metrics) {
+    return metrics.find(m => m.toLowerCase().includes('err'));
+}
+  // ==========================================
+  // 4. COMMON LOGIC
+  // ==========================================
+  const MONTHS_RU = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const WEEK_DAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+  function uiKeyWeekCollapsed(mI,cI,wI){ return `ui_weekCollapsed_m${mI}_c${cI}_w${wI}`; }
+  function isWeekCollapsed(mI,cI,wI){ return !!inputState[uiKeyWeekCollapsed(mI,cI,wI)]; }
+  function setWeekCollapsed(mI,cI,wI,val){ inputState[uiKeyWeekCollapsed(mI,cI,wI)] = !!val; }
+
+  // --- TOGGLE HANDLERS (With immediate render for local feel) ---
+  function toggleWeek(mI,cI,wI, type='traffic'){
+    const key = uiKeyWeekCollapsed(mI,cI,wI);
+    const next = !inputState[key];
+    inputState[key] = next;
+    db.ref('kpi_project/inputState/' + key).set(next);
+    // Force Local Render so it feels instant
+    if(type==='smm') renderSMM(); else renderTraffic();
+  }
+
+  function toggleDays(uniqueId) {
+    const stateKey = 'ui_days_expanded_' + uniqueId;
+    const next = !inputState[stateKey];
+    inputState[stateKey] = next;
+    db.ref('kpi_project/inputState/' + stateKey).set(next);
+    // Force Local Render so it feels instant
+    if(uniqueId.startsWith('smm_')) renderSMM(); else renderTraffic();
+  }
+
+  function toggleMonth(i){ 
+      monthsData[i].collapsed=!monthsData[i].collapsed; 
+      saveStructure(); 
+      renderTraffic(); 
+      renderSMM(); 
+  }
+
+  function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
+  function nextMonthByIndex(idx){ const total=idx; const year=2026+Math.floor(total/12); const m=total%12; return {year,monthIndex0:m}; }
+  
+  function getMonthTimeProgress(monthName) {
+      if(!monthName) return 1;
+      const parts = monthName.split(' ');
+      const mName = parts[0]; 
+      const year = parseInt(parts[1]);
+      const mIdx = MONTHS_RU.indexOf(mName);
+      
+      const now = new Date();
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth(); 
+
+      if (year < curYear || (year === curYear && mIdx < curMonth)) return 1;
+      if (year > curYear || (year === curYear && mIdx > curMonth)) return 0;
+
+      const totalDays = new Date(year, mIdx + 1, 0).getDate();
+      const currentDay = now.getDate();
+      return Math.min(currentDay / totalDays, 1);
+  }
+
+  function generateWeeks(year, monthIndex0){
+    const dmax = daysInMonth(year, monthIndex0);
+    const weeks = [];
+    let d = 1;
+    while (d <= dmax) {
+      let days = [];
+      let dow = new Date(year, monthIndex0, d).getDay();
+      let toSun = (7 - dow) % 7; if(dow===0) toSun=0;
+      let end = Math.min(d + toSun, dmax);
+      for (let i = d; i <= end; i++) {
+        let dateObj = new Date(year, monthIndex0, i);
+        days.push({ num: i, name: WEEK_DAYS[dateObj.getDay()] });
+      }
+      weeks.push({ title: `${d}–${end}`, days: days });
+      d = end + 1;
+    }
+    return weeks;
+  }
+
+  function saveStructure() {
+      db.ref('kpi_project/monthsData').set(monthsData);
+  }
+
+  function addNewMonth(){
+    const idx=monthsData.length; const {year,monthIndex0}=nextMonthByIndex(idx);
+    const name=`${MONTHS_RU[monthIndex0]} ${year}`; const weeks=generateWeeks(year,monthIndex0);
+    let lastTrafficCh = ["Яндекс Директ"];
+    let lastSmmCh = JSON.parse(JSON.stringify(DEFAULT_SMM_SETUP)); 
+    if (monthsData.length > 0) {
+        const prev = monthsData[monthsData.length-1];
+        if (prev.channels) lastTrafficCh = [...prev.channels];
+        if (prev.smmChannels && prev.smmChannels.length > 0) {
+            lastSmmCh = JSON.parse(JSON.stringify(prev.smmChannels));
+        }
+    }
+    monthsData.push({ name, collapsed: false, channels: lastTrafficCh, smmChannels: lastSmmCh, weeks });
+    renderTraffic(); renderSMM();
+    saveStructure();
+  }
+
+  function _reindexState(targetType, mIdx, cIdx = -1) {
+    const newState = {};
+    Object.keys(inputState).forEach(key => {
+      const mMatch = key.match(/(?:^|_)m(\d+)(?:_|$)/);
+      if (!mMatch) { newState[key] = inputState[key]; return; }
+      const keyM = parseInt(mMatch[1]);
+      if (targetType === 'month') {
+        if (keyM < mIdx) { newState[key] = inputState[key]; }
+        else if (keyM > mIdx) { const newKey = key.replace(`m${keyM}`, `m${keyM - 1}`); newState[newKey] = inputState[key]; }
+        return;
+      }
+      if (keyM !== mIdx) { newState[key] = inputState[key]; return; }
+      const isSmmKey = key.startsWith('smm_');
+      if (targetType === 'traffic' && isSmmKey) { newState[key] = inputState[key]; return; }
+      if (targetType === 'smm' && !isSmmKey) { newState[key] = inputState[key]; return; }
+      const cMatch = key.match(/(?:^|_)c(\d+)(?:_|$)/);
+      if (!cMatch) { newState[key] = inputState[key]; return; }
+      const keyC = parseInt(cMatch[1]);
+      if (keyC < cIdx) { newState[key] = inputState[key]; }
+      else if (keyC > cIdx) { const newKey = key.replace(new RegExp(`_c${keyC}(_|$)`), `_c${keyC - 1}$1`); newState[newKey] = inputState[key]; }
+    });
+    inputState = newState;
+  }
+
+  function deleteMonth(i) { 
+    if(confirm("Удалить этот месяц и все данные?")){ 
+      _reindexState('month', i); monthsData.splice(i,1); renderTraffic(); renderSMM(); 
+      saveStructure();
+    } 
+  }
+  function addTrafficChannel(mI){ const n=prompt("Название канала:"); if(n){ monthsData[mI].channels.push(n); renderTraffic(); saveStructure(); } }
+  function deleteTrafficChannel(mI,cI){ 
+    if(confirm("Удалить канал?")){ _reindexState('traffic', mI, cI); monthsData[mI].channels.splice(cI,1); renderTraffic(); saveStructure(); } 
+  }
+  function updateWeekName(m,w,txt){ monthsData[m].weeks[w].title=txt; saveStructure(); }
+
+  // ==========================================
+  // 5. SMM MODALS
+  // ==========================================
+  function openSmmModal(mIndex) {
+      activeSmmModalMonthIndex = mIndex;
+      document.getElementById('modalSmmName').value = '';
+      const list = document.getElementById('modalSmmMetrics');
+      list.innerHTML = '';
+      AVAILABLE_METRICS.forEach(met => {
+          const label = document.createElement('label');
+          label.className = 'checkbox-item';
+          label.innerHTML = `<input type="checkbox" value="${met}"> ${met}`;
+          list.appendChild(label);
+      });
+      document.getElementById('smmModalBackdrop').classList.add('active');
+  }
+  function closeSmmModal() { document.getElementById('smmModalBackdrop').classList.remove('active'); activeSmmModalMonthIndex = -1; }
+  function confirmAddSmmChannel() {
+      const name = document.getElementById('modalSmmName').value.trim();
+      if (!name) { alert("Введите название канала"); return; }
+      const selectedMetrics = [];
+      document.querySelectorAll('#modalSmmMetrics input:checked').forEach(cb => { selectedMetrics.push(cb.value); });
+      if (selectedMetrics.length === 0) { alert("Выберите хотя бы одну метрику"); return; }
+      if (activeSmmModalMonthIndex > -1) {
+          if (!monthsData[activeSmmModalMonthIndex].smmChannels) { monthsData[activeSmmModalMonthIndex].smmChannels = []; }
+          monthsData[activeSmmModalMonthIndex].smmChannels.push({ name: name, metrics: selectedMetrics });
+          renderSMM(); closeSmmModal();
+          saveStructure();
+      }
+  }
+  function deleteSmmChannel(mI, cI) { if(confirm("Удалить этот SMM канал?")) { _reindexState('smm', mI, cI); monthsData[mI].smmChannels.splice(cI, 1); renderSMM(); saveStructure(); } }
+  function deleteSmmMetric(mI, cI, metricName){
+    if(confirm(`Удалить колонку "${metricName}"?`)){
+       const ch = monthsData[mI].smmChannels[cI]; const idx = ch.metrics.indexOf(metricName);
+       if(idx > -1) { ch.metrics.splice(idx, 1); renderSMM(); saveStructure(); }
+    }
+  }
+  function openAddMetricModal(mI, cI){
+    activeAddMetricMonth = mI; activeAddMetricChannel = cI;
+    const ch = monthsData[mI].smmChannels[cI]; const current = new Set(ch.metrics);
+    const list = document.getElementById('addMetricList'); list.innerHTML = '';
+    const available = AVAILABLE_METRICS.filter(m => !current.has(m));
+    if(available.length === 0){ list.innerHTML = '<div style="color:var(--tx-sec);font-size:12px;">Все метрики уже добавлены</div>'; } 
+    else { available.forEach(met => { const label = document.createElement('label'); label.className = 'checkbox-item'; label.innerHTML = `<input type="radio" name="new_metric" value="${met}"> ${met}`; list.appendChild(label); }); }
+    document.getElementById('addMetricBackdrop').classList.add('active');
+  }
+  function closeAddMetricModal(){ document.getElementById('addMetricBackdrop').classList.remove('active'); activeAddMetricMonth = -1; activeAddMetricChannel = -1; }
+  function confirmAddMetric(){ const sel = document.querySelector('input[name="new_metric"]:checked'); if(!sel) return; monthsData[activeAddMetricMonth].smmChannels[activeAddMetricChannel].metrics.push(sel.value); renderSMM(); closeAddMetricModal(); saveStructure(); }
+
+
+  // ==========================================
+  // 6. RENDER LOGIC
+  // ==========================================
+  function onCellFocus(el){ const kind = el.dataset.kind || 'count'; if(kind==='percent') el.value=String(parsePercentLike(el.value)||""); else el.value=String(parseNumberLike(el.value)||""); setTimeout(()=>{try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){}},0); }
+// === ОБНОВЛЕННАЯ ФУНКЦИЯ BLUR (Уход из ячейки) ===
+
+  function onCellBlur(el) {
+      const rawValue = el.value.trim();
+      const id = el.dataset.id;
+      const kind = el.dataset.kind || 'count';
+
+      // 1. Если пользователь очистил поле (пустая строка)
+      if (rawValue === '') {
+          el.value = ''; // Визуально оставляем пустым
+          inputState[id] = null; // В памяти ставим null
+          // В базе данных удаляем значение (или ставим null)
+          db.ref('kpi_project/inputState/' + id).remove(); 
+          
+          // Запускаем пересчет (null в расчетах превратится в 0 благодаря проверкам || 0)
+          if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
+          return;
+      }
+
+      // 2. Если пользователь ввел что-то (включая "0")
+      let n;
+      if (kind === 'percent') {
+          n = parsePercentLike(rawValue);
+      } else {
+          // Используем стандартный парсер
+          n = parseNumberLike(rawValue);
+      }
+
+      // Сохраняем число (даже если это 0)
+      inputState[id] = n;
+      db.ref('kpi_project/inputState/' + id).set(n);
+
+      // Форматируем отображение
+      if (kind === 'money') el.value = formatMoney(n);
+      else if (kind === 'percent') el.value = formatPercent(n);
+      else el.value = formatCount(n);
+
+      // Пересчитываем таблицы
+      if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
+  } 
+  function setupEventListeners() {
+    const handleInput = (e) => {
+        if (e.target.classList.contains('cell-input')) {
+            const el = e.target;
+            const id = el.dataset.id;
+            const kind = el.dataset.kind || 'count'; 
+            const val = (kind === 'percent') ? parsePercentLike(el.value) : parseNumberLike(el.value);
+            
+            inputState[id] = val; // Local update
+            db.ref('kpi_project/inputState/' + id).set(val); // Cloud update
+            
+            if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
+        }
+    };
+    const handleFocus = (e) => { if(e.target.classList.contains('cell-input')) onCellFocus(e.target); };
+    const handleBlur = (e) => { if(e.target.classList.contains('cell-input')) onCellBlur(e.target); };
+
+    document.getElementById('trafficContainer').addEventListener('input', handleInput);
+    document.getElementById('trafficContainer').addEventListener('focusin', handleFocus);
+    document.getElementById('trafficContainer').addEventListener('focusout', handleBlur);
+    document.getElementById('smmContainer').addEventListener('input', handleInput);
+    document.getElementById('smmContainer').addEventListener('focusin', handleFocus);
+    document.getElementById('smmContainer').addEventListener('focusout', handleBlur);
+  }
+
+// --- TRAFFIC RENDER (UPDATED) ---
+  function renderTraffic() {
+    _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
+      const chs = month.channels || [];
+      // Шапка месяца
+      let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
+      <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="addTrafficChannel(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
+      <div class="stats-grid">
+         <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
+         <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
+         <div class="stat-box"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
+         <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов A+B</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
+      </div></div>
+      <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
+
+      // Генерация карточек каналов
+      chs.forEach((ch, cI) => {
+        // === ИЗМЕНЕНИЯ ЗДЕСЬ (MINI GRID) ===
+        html += `<div class="channel-card"><div class="channel-header"><div><div class="channel-name">${ch} <span class="delete-ch-btn" onclick="deleteTrafficChannel(${mIndex},${cI})">×</span></div>
+        <div class="mini-grid">
+            <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
+            <div class="mini-chip">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
+            <div class="mini-chip">CPL: <strong><span id="m${mIndex}_c${cI}_mini_fcpl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pcpl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_cpl"></span></div>
+        </div></div></div>
+        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
+
+        month.weeks.forEach((weekObj, wI) => {
+          const rowId = `m${mIndex}_w${wI}`; 
+          const collapsed = isWeekCollapsed(mIndex, cI, wI);
+          const caret = collapsed ? '▸' : '▾';
+          
+          const uniqueWeekId = `d_m${mIndex}_c${cI}_w${wI}`;
+          const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
+          const activeClass = isDaysExpanded ? 'active' : '';
+
+          html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cI},${wI})">${caret}</button><div class="week-title-text" contenteditable onblur="updateWeekName(${mIndex},${wI},this.innerText)">${weekObj.title}</div>
+          ${(weekObj.days||[]).length>0?`<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>`:''}</div></td><td class="col-type" style="border-bottom:1px solid var(--bd-color)"></td><td colspan="3" style="border-bottom:1px solid var(--bd-color)"></td></tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeCells(rowId,cI,'plan')}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeCells(rowId,cI,'fact')}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makePercCells(rowId,cI)}</tr>`;
+          
+          (weekObj.days||[]).forEach((day, dI) => {
+            const dayId = `${rowId}_d${dI}_c${cI}`;
+            html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
+             <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>
+             <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_spend" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
+             <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_leads" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>
+             <td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td></tr>`;
+          });
+          html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="5"></td></tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+      });
+      // (Total card logic omitted for brevity, it stays same as before)
+      html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
+      month.weeks.forEach((weekObj, wI) => {
+        const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
+        html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},-1,${wI})">${caret}</button><div class="week-title-text">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="3"></td></tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeTotalCells(rowId,'plan')}</tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeTotalCells(rowId,'fact')}</tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeTotalPercCells(rowId)}</tr>
+        <tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td colspan="5"></td></tr>`;
+      });
+      html += `</tbody></table></div></div></div></div>`;
+      return html;
+    });
+    recalcAll();
+  }
+// ==========================================
+// NEW: SMM TOTAL AGGREGATION LOGIC
+// ==========================================
+
+// 1. Генерация HTML для сводной таблицы
+function renderSMMTotalCard(mIndex, month) {
+    // Используем индекс -200, чтобы не пересекаться с реальными каналами при сворачивании
+    const groupKey = -200; 
+    
+    let html = `<div class="channel-card total-card" style="margin-top:20px;">
+        <div class="channel-header"><div class="channel-name">ВСЕГО SMM (Сводка)</div></div>
+        <div class="channel-table-wrap">
+            <table class="channel-table">
+                <thead>
+                    <tr>
+                        <th class="col-sticky-1">Период</th>
+                        <th class="col-type">Тип</th>
+                        <th>Охват</th>
+                        <th>Лиды</th>
+                        <th>ERR</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+    month.weeks.forEach((weekObj, wI) => {
+        // Проверяем, свернута ли неделя для группы -200
+        const collapsed = isWeekCollapsed(mIndex, groupKey, wI);
+        const caret = collapsed ? '▸' : '▾';
+        const weekId = `smm_total_m${mIndex}_w${wI}`;
+
+        // Заголовок недели
+        html += `<tr class="week-head">
+            <td class="col-sticky-1">
+                <div class="week-header-inner">
+                    <button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${groupKey},${wI},'smm')">${caret}</button>
+                    <div class="week-title-text" style="pointer-events:none">${weekObj.title}</div>
+                </div>
+            </td>
+            <td class="col-type"></td>
+            <td colspan="3"></td>
+        </tr>`;
+
+        // ПЛАН
+        html += `<tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}">
+            <td class="col-sticky-1" style="border-bottom:none"></td>
+            <td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_reach_plan">-</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_leads_plan">-</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_err_plan">-</td>
+        </tr>`;
+
+        // ФАКТ
+        html += `<tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}">
+            <td class="col-sticky-1" style="border-bottom:none"></td>
+            <td class="col-type" style="font-weight:900;">ФАКТ</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_reach_fact">-</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_leads_fact">-</td>
+            <td class="cell-input" style="font-weight:900" id="${weekId}_err_fact">-</td>
+        </tr>`;
+
+        // ПРОЦЕНТЫ
+        html += `<tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}">
+            <td class="col-sticky-1"></td>
+            <td class="col-type" style="font-weight:900;">%</td>
+            <td><div id="${weekId}_reach_perc" class="badge badge-neutral">-</div></td>
+            <td><div id="${weekId}_leads_perc" class="badge badge-neutral">-</div></td>
+            <td><div id="${weekId}_err_perc" class="badge badge-neutral">-</div></td>
+        </tr>`;
+
+        html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}"><td colspan="5"></td></tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+    return html;
+}
+
+// 2. Логика расчета цифр
+function calcSMMMonthTotal(mI) {
+    const month = monthsData[mI];
+    if (!month || !month.smmChannels) return;
+
+    month.weeks.forEach((w, wI) => {
+        let stats = {
+            reach: { p: 0, f: 0 },
+            leads: { p: 0, f: 0 },
+            err: { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 }
+        };
+
+        month.smmChannels.forEach((ch, cI) => {
+            // A. Суммируем Охват и Лиды
+            ch.metrics.forEach(met => {
+                const l = met.toLowerCase();
+                const keyP = getSMMKey(mI, cI, wI, met, 'plan');
+                const keyF = getSMMKey(mI, cI, wI, met, 'fact');
+                const valP = inputState[keyP] || 0;
+                const valF = inputState[keyF] || 0;
+
+                if (l.includes('охват') || l.includes('показы') || l.includes('просмотры')) {
+                    stats.reach.p += valP; stats.reach.f += valF;
+                } else if (l.includes('лиды')) {
+                    stats.leads.p += valP; stats.leads.f += valF;
+                }
+            });
+
+            // B. Вычисляем вклад в ERR (взвешивание)
+            const reachMet = findReachMetricName(ch.metrics);
+            const errMet = findErrMetricName(ch.metrics);
+            
+            if (reachMet && errMet) {
+                const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0;
+                const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0;
+                if (rP > 0) {
+                    stats.err.pReactions += rP * (eP / 100);
+                    stats.err.pReach += rP;
+                }
+                const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0;
+                const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0;
+                if (rF > 0) {
+                    stats.err.fReactions += rF * (eF / 100);
+                    stats.err.fReach += rF;
+                }
+            }
+        });
+
+        const weekId = `smm_total_m${mI}_w${wI}`;
+        
+        // Рендер Охвата и Лидов
+        txt(`${weekId}_reach_plan`, fCount(stats.reach.p));
+        txt(`${weekId}_reach_fact`, fCount(stats.reach.f));
+        badge(`${weekId}_reach_perc`, stats.reach.p, stats.reach.f);
+
+        txt(`${weekId}_leads_plan`, fCount(stats.leads.p));
+        txt(`${weekId}_leads_fact`, fCount(stats.leads.f));
+        badge(`${weekId}_leads_perc`, stats.leads.p, stats.leads.f);
+
+        // Рендер Взвешенного ERR
+        const wErrP = stats.err.pReach > 0 ? (stats.err.pReactions / stats.err.pReach) * 100 : 0;
+        const wErrF = stats.err.fReach > 0 ? (stats.err.fReactions / stats.err.fReach) * 100 : 0;
+        
+        txt(`${weekId}_err_plan`, formatPercent(wErrP));
+        txt(`${weekId}_err_fact`, formatPercent(wErrF));
+        badge(`${weekId}_err_perc`, wErrP, wErrF);
+    });
+}
+// --- ОБНОВЛЕННАЯ ФУНКЦИЯ RENDER SMM (С НОВОЙ ШАПКОЙ) ---
+function renderSMM() {
+    _smartRenderList('smmContainer', monthsData, 'smm', (month, mIndex) => {
+      let html = `<div class="card-top">
+      <div class="month-header">
+        <div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
+        <div style="display:flex;gap:10px;">
+            <button class="kpi-btn" onclick="openSmmModal(${mIndex})">+ Канал</button>
+            <button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button>
+        </div>
+      </div>
+      
+      <div class="stats-grid" style="margin-bottom:25px;">
+         
+         <div class="stat-box">
+            <div class="stat-label">Охват (Факт/План)</div>
+            <div class="stat-val">
+                <span id="smm_m${mIndex}_stat_reach_f">-</span> / 
+                <span id="smm_m${mIndex}_stat_reach_p" style="opacity:.6;font-size:14px">-</span>
+            </div>
+            <div class="stat-sub" id="smm_m${mIndex}_stat_reach_perc" style="margin-top:5px;font-size:12px">0%</div>
+         </div>
+
+         <div class="stat-box">
+            <div class="stat-label">Лиды (Факт/План)</div>
+            <div class="stat-val">
+                <span id="smm_m${mIndex}_stat_leads_f" class="accent-text">-</span> / 
+                <span id="smm_m${mIndex}_stat_leads_p" style="opacity:.6;font-size:14px">-</span>
+            </div>
+            <div class="stat-sub" id="smm_m${mIndex}_stat_leads_perc" style="margin-top:5px;font-size:12px">0%</div>
+         </div>
+
+         <div class="stat-box">
+            <div class="stat-label">ERR (Факт/План)</div>
+            <div class="stat-val">
+                <span id="smm_m${mIndex}_stat_err_f">-</span> / 
+                <span id="smm_m${mIndex}_stat_err_p" style="opacity:.6;font-size:14px">-</span>
+            </div>
+            <div class="stat-sub" id="smm_m${mIndex}_stat_err_perc" style="margin-top:5px;font-size:12px">-</div>
+         </div>
+
+      </div>
+      </div>
+      
+      <div class="smm-month-body" style="${month.collapsed?'display:none':''}"><div class="smm-stack-grid">`;
+      
+      // ... (ОСТАЛЬНОЙ КОД РЕНДЕРА КАНАЛОВ БЕЗ ИЗМЕНЕНИЙ) ...
+      (month.smmChannels || []).forEach((channel, cIndex) => {
+        html += `<div class="channel-card"><div class="channel-header">
+        <div>
+            <div class="channel-name">${channel.name} <span class="add-metric-btn" onclick="openAddMetricModal(${mIndex}, ${cIndex})">+ Метрика</span><span class="delete-ch-btn" onclick="deleteSmmChannel(${mIndex},${cIndex})">×</span></div>
+            <div class="mini-grid">
+                ${channel.metrics.map(met => {
+                   const slug = slugify(met);
+                   return `<div class="mini-chip">
+                       ${met}:
+                       <strong class="accent"><span id="smm_mini_f_m${mIndex}_c${cIndex}_${slug}">-</span></strong>
+                       <span class="mini-plan" id="smm_mini_p_m${mIndex}_c${cIndex}_${slug}">/ -</span>
+                       <span id="smm_mini_perc_m${mIndex}_c${cIndex}_${slug}"></span>
+                   </div>`;
+                }).join('')}
+            </div>
+        </div>
+        </div>
+        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th>`;
+        channel.metrics.forEach(metric => { html += `<th>${metric} <span class="del-col-btn" onclick="deleteSmmMetric(${mIndex}, ${cIndex}, '${metric}')">×</span></th>`; });
+        html += `</tr></thead><tbody>`;
+        month.weeks.forEach((weekObj, wI) => {
+          const collapsed = isWeekCollapsed(mIndex, cIndex, wI); const caret = collapsed ? '▸' : '▾'; 
+          const uniqueWeekId = `smm_d_m${mIndex}_c${cIndex}_w${wI}`;
+          const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
+          const activeClass = isDaysExpanded ? 'active' : '';
+
+          html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cIndex},${wI},'smm')">${caret}</button><div class="week-title-text" style="pointer-events:none">${weekObj.title}</div>${(weekObj.days||[]).length > 0 ? `<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>` : ''}</div></td><td class="col-type"></td>`;
+          channel.metrics.forEach(() => { html += `<td></td>`; }); html += `</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeSMMCells(mIndex, cIndex, wI, 'plan', channel.metrics)}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeSMMCells(mIndex, cIndex, wI, 'fact', channel.metrics)}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeSMMPercCells(mIndex, cIndex, wI, channel.metrics)}</tr>`;
+          (weekObj.days||[]).forEach((day, dI) => {
+             html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
+             <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>${makeSMMDayCells(mIndex, cIndex, wI, dI, channel.metrics)}</tr>`;
+          });
+          html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td colspan="${2+channel.metrics.length}"></td></tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+      });
+
+      // Добавляем таблицу TOTAL (из предыдущего шага)
+      if(typeof renderSMMTotalCard === 'function') {
+         html += renderSMMTotalCard(mIndex, month);
+      }
+
+      html += `</div></div>`;
+      return html;
+    });
+    recalcAllSMM();
+}
+  // --- OVERVIEW RENDER ---
+  function renderOverview() {
+    const labels = [];
+    const tfSpendF = [], tfSpendP = [];
+    const tfLeadsF = [], tfLeadsP = [];
+    const tfCplF = [], tfCplP = [];
+    
+    const smmLeadsF = [], smmLeadsP = [];
+    const smmReachF = [], smmReachP = [];
+    const smmSubsF = [], smmSubsP = [];
+
+    const lastIdx = monthsData.length - 1;
+    let currStats = { s:0, ps:0, l:0, pl:0, cpl:0, pcpl:0, smmL:0, smmPL:0, smmR:0, smmPR:0, smmS:0, smmPS:0 };
+
+    monthsData.forEach((m, mI) => {
+        labels.push(m.name);
+        
+        let ps=0, pl=0, fs=0, fl=0;
+        const chs = m.channels || [];
+        m.weeks.forEach((_, wI) => {
+            chs.forEach((_, cI) => {
+                const id = `m${mI}_w${wI}_c${cI}`;
+                ps += inputState[`${id}_plan_spend`] || 0;
+                pl += inputState[`${id}_plan_leads`] || 0;
+                fs += inputState[`${id}_fact_spend`] || 0;
+                fl += inputState[`${id}_fact_leads`] || 0;
+            });
+        });
+        
+        tfSpendF.push(fs); tfSpendP.push(ps);
+        tfLeadsF.push(fl); tfLeadsP.push(pl);
+        const cpl = (fs > 0 && fl > 0) ? Math.round(fs / fl) : 0;
+        const pcpl = (ps > 0 && pl > 0) ? Math.round(ps / pl) : 0;
+        tfCplF.push(cpl); tfCplP.push(pcpl);
+
+        let reachF=0, reachP=0; 
+        let leadsF=0, leadsP=0;
+        let subsF=0, subsP=0;
+
+        (m.smmChannels || []).forEach((ch, cI) => {
+             ch.metrics.forEach(metricName => {
+                 const isReach = metricName.includes('Охват') || metricName.includes('Показы') || metricName.includes('Просмотры');
+                 const isLeads = metricName.includes('Лиды');
+                 const isSubs = metricName.includes('Чистый приток') || metricName.includes('Подписчики');
+                 if(isReach || isLeads || isSubs){
+                     m.weeks.forEach((w, wI) => {
+                         const valF = inputState[getSMMKey(mI, cI, wI, metricName, 'fact')] || 0;
+                         const valP = inputState[getSMMKey(mI, cI, wI, metricName, 'plan')] || 0;
+                         if(isReach) { reachF += valF; reachP += valP; }
+                         if(isLeads) { leadsF += valF; leadsP += valP; }
+                         if(isSubs)  { subsF += valF;  subsP += valP; }
+                      });
+                 }
+             });
+        });
+        smmLeadsF.push(leadsF); smmLeadsP.push(leadsP);
+        smmReachF.push(reachF); smmReachP.push(reachP);
+        smmSubsF.push(subsF);   smmSubsP.push(subsP);
+
+        if(mI === lastIdx) {
+            currStats = { s:fs, ps:ps, l:fl, pl:pl, cpl:cpl, pcpl:pcpl, smmL: leadsF, smmPL: leadsP, smmR: reachF, smmPR: reachP, smmS: subsF, smmPS: subsP };
+        }
+    });
+
+    if(lastIdx >= 0) {
+        const timeProgress = getMonthTimeProgress(monthsData[lastIdx].name);
+        document.getElementById('ov_current_month_name').innerText = monthsData[lastIdx].name;
+        
+        document.getElementById('ov_curr_spend').innerText = formatMoney(currStats.s);
+        document.getElementById('ov_curr_spend_plan').innerText = `План: ${formatMoney(currStats.ps)}`;
+        renderDev(document.getElementById('ov_curr_spend_perc'), currStats.ps, currStats.s, true, timeProgress, false);
+
+        document.getElementById('ov_curr_leads').innerText = formatCount(currStats.l);
+        document.getElementById('ov_curr_leads_plan').innerText = `План: ${formatCount(currStats.pl)}`;
+        renderDev(document.getElementById('ov_curr_leads_perc'), currStats.pl, currStats.l, false, timeProgress, false);
+
+        document.getElementById('ov_curr_cpl').innerText = formatMoney(currStats.cpl);
+        if(currStats.pcpl > 0 && currStats.cpl > 0) {
+            renderDev(document.getElementById('ov_curr_cpl_perc'), currStats.pcpl, currStats.cpl, true, 1, true);
+        } else { document.getElementById('ov_curr_cpl_perc').innerText = '-'; }
+
+        document.getElementById('ov_curr_smm_leads').innerText = formatCount(currStats.smmL);
+        document.getElementById('ov_curr_smm_leads_plan').innerText = `План: ${formatCount(currStats.smmPL)}`;
+        renderDev(document.getElementById('ov_curr_smm_leads_perc'), currStats.smmPL, currStats.smmL, false, timeProgress, false);
+
+        document.getElementById('ov_curr_smm_subs').innerText = formatCount(currStats.smmS);
+        document.getElementById('ov_curr_smm_subs_plan').innerText = `План: ${formatCount(currStats.smmPS)}`;
+        renderDev(document.getElementById('ov_curr_smm_subs_perc'), currStats.smmPS, currStats.smmS, false, timeProgress, false);
+
+        document.getElementById('ov_curr_smm_reach').innerText = formatCount(currStats.smmR);
+        document.getElementById('ov_curr_smm_reach_plan').innerText = `План: ${formatCount(currStats.smmPR)}`;
+        renderDev(document.getElementById('ov_curr_smm_reach_perc'), currStats.smmPR, currStats.smmR, false, timeProgress, false);
+    }
+    initCharts(labels, tfSpendF, tfSpendP, tfLeadsF, tfLeadsP, tfCplF, tfCplP, smmLeadsF, smmLeadsP, smmReachF, smmReachP, smmSubsF, smmSubsP);
+  }
+
+  function renderDev(el, plan, fact, invert, timeProgress = 1, isRate = false) {
+     if(plan <= 0) { el.innerText = ''; return; }
+     const completionPerc = (fact/plan); 
+     const pShow = Math.round(completionPerc * 100);
+     const tolerance = 0.1; 
+     let status = 'bad'; 
+
+     if (isRate) {
+         if(invert) {
+             if (fact <= plan) status = 'good'; else if (fact <= plan * (1 + tolerance)) status = 'warning'; else status = 'bad';
+         } else {
+             if (fact >= plan) status = 'good'; else if (fact >= plan * (1 - tolerance)) status = 'warning'; else status = 'bad';
+         }
+     } else {
+         if(invert) {
+             if (completionPerc <= timeProgress) status = 'good'; else if (completionPerc <= (timeProgress + tolerance)) status = 'warning'; else status = 'bad';
+         } else {
+             if (completionPerc >= timeProgress) status = 'good'; else if (completionPerc >= (timeProgress - tolerance)) status = 'warning'; else status = 'bad';
+         }
+     }
+     
+     let cls = 'trend-bad';
+     if (status === 'good') cls = 'trend-good'; if (status === 'warning') cls = 'trend-warning';
+     el.innerHTML = `<span class="${cls}">${pShow}%</span> выполнения`;
+  }
+
+  function initCharts(labels, sF, sP, lF, lP, cF, cP, slF, slP, srF, srP, ssF, ssP) {
+     createLineChart('chartTrafficSpend', labels, 'Расход Факт', sF, '#3B82F6', 'Расход План', sP);
+     createLineChart('chartTrafficLeads', labels, 'Лиды Факт', lF, '#30D158', 'Лиды План', lP);
+     createLineChart('chartCPL', labels, 'CPL Факт', cF, '#F59E0B', 'CPL План', cP);
+     createLineChart('chartSMMLeads', labels, 'SMM Лиды Факт', slF, '#A855F7', 'SMM Лиды План', slP);
+     createLineChart('chartSMMSubs', labels, 'Приток Факт', ssF, '#EC4899', 'Приток План', ssP);
+     createLineChart('chartSMMReach', labels, 'Охват Факт', srF, '#6366F1', 'Охват План', srP);
+  }
+
+  function createLineChart(canvasId, labels, label1, data1, color1, label2, data2) {
+      const ctx = document.getElementById(canvasId);
+      if(!ctx) return;
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      chartInstances[canvasId] = new Chart(ctx, {
+          type: 'line',
+          data: { labels: labels, datasets: [
+                  { label: label1, data: data1, borderColor: color1, backgroundColor: color1, borderWidth: 2, tension: 0.3, pointRadius: 3 },
+                  { label: label2, data: data2, borderColor: color1, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 4], tension: 0.3, pointRadius: 0, pointHoverRadius: 0, opacity: 0.5 }
+              ] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9CA3AF', font: {family:'Inter'} } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9CA3AF' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9CA3AF' }, beginAtZero: true } } }
+      });
+  }
+
+  // ==========================================
+  // 7. CALC LOGIC
+  // ==========================================
+  function recalc(id){
+    const parts=id.split('_'); let mI=-1,wI=-1,cI=-1;
+    if(id.includes('_d')){
+        const mKey=parts.find(p=>p.startsWith('m')); const wKey=parts.find(p=>p.startsWith('w')); const cKey=parts.find(p=>p.startsWith('c'));
+        if(mKey) mI=parseInt(mKey.replace('m','')); if(wKey) wI=parseInt(wKey.replace('w','')); if(cKey) cI=parseInt(cKey.replace('c',''));
+        calcDaysToWeek(mI,wI,cI);
+    } else {
+        const mKey=parts[0]; const wKey=parts[1]; const cKey=parts[2];
+        if(mKey&&wKey&&cKey){ mI=parseInt(mKey.replace('m','')); wI=parseInt(wKey.replace('w','')); cI=parseInt(cKey.replace('c','')); calcDaysToWeek(mI,wI,cI); }
+    }
+    if(mI>=0&&wI>=0&&cI>=0) { calcRow(`m${mI}_w${wI}_c${cI}`); calcWeekTotal(`m${mI}`,`w${wI}`); calcChannelGrand(mI,cI); calcGrand(`m${mI}`); }
+  }
+  function calcDaysToWeek(mI, wI, cI) {
+    const month=monthsData[mI]; if(!month) return; const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
+    const days=weekObj.days; const rowId=`m${mI}_w${wI}`;
+    const planSpend=inputState[`${rowId}_c${cI}_plan_spend`]||0; const planLeads=inputState[`${rowId}_c${cI}_plan_leads`]||0;
+    const dayTargetS=planSpend>0?(planSpend/7):0; const dayTargetL=planLeads>0?(planLeads/7):0; const targetCPL=planLeads>0?(planSpend/planLeads):0;
+    let sumS=0, sumL=0;
+    days.forEach((d,dI)=>{
+        const dayId=`${rowId}_d${dI}_c${cI}`; const valS=inputState[`${dayId}_spend`]||0; const valL=inputState[`${dayId}_leads`]||0;
+        sumS+=valS; sumL+=valL;
+        const elS=document.getElementById(`${dayId}_spend`); const elL=document.getElementById(`${dayId}_leads`); const elC=document.getElementById(`${dayId}_cpl`);
+        if(elS && elL){
+            elS.classList.remove('smart-input-bad','smart-input-good'); elL.classList.remove('smart-input-bad','smart-input-good');
+            if(valS>0 && dayTargetS>0 && valS>dayTargetS*1.15) elS.classList.add('smart-input-bad');
+            if(planLeads>0){ if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); }
+            if(valL>0){ const dc=Math.round(valS/valL); let cls="day-cpl-neutral"; if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; }
+            else elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
+        }
+    });
+    inputState[`${rowId}_c${cI}_fact_spend`]=sumS; inputState[`${rowId}_c${cI}_fact_leads`]=sumL;
+    const wInpS=document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value=formatMoney(sumS);
+    const wInpL=document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value=formatCount(sumL);
+  }
+  function makeCells(rowId,cI,type){ const id=`${rowId}_c${cI}`; const vS=inputState[id+`_${type}_spend`]||''; const vL=inputState[id+`_${type}_leads`]||''; return `<td><input type="text" inputmode="numeric" class="cell-input ${type}-spend" id="${id}_${type.charAt(0)}s" data-id="${id}_${type}_spend" data-kind="money" value="${formatMoney(vS)}" placeholder="-"></td><td><input type="text" inputmode="numeric" class="cell-input ${type}-leads" id="${id}_${type.charAt(0)}l" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vL)}" placeholder="-"></td><td class="cpl-cell" id="${id}_${type}_cpl">-</td>`; }
+  function makeTotalCells(rowId,type){ return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td><td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td><td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>`; }
+  function makePercCells(rowId,cI){ return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>`; }
+  function makeTotalPercCells(rowId){ return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>`; }
+  function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
+  function txt(id, v){ const el=document.getElementById(id); if(el) el.innerText=v; }
+  function badge(id, plan, fact, invert=false){ const el=document.getElementById(id); if(!el) return; plan=+plan||0; fact=+fact||0; if(plan<=0){ el.className='badge badge-neutral'; el.innerText='-'; return; } const p=Math.round((fact/plan)*100); let cls='badge-neutral'; if(invert){ if(p<=100) cls='badge-good'; else cls='badge-bad'; } else { if(p>=100) cls='badge-good'; else cls='badge-bad'; } el.className=`badge ${cls}`; el.innerText=p+'%'; }
+  function calcRow(id){ const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); badge(`${id}_perc_spend`,ps,fs,true); badge(`${id}_perc_leads`,pl,fl); badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true); }
+  function calcWeekTotal(m,w){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); (monthsData[mI].channels||[]).forEach((_,i)=>{ const id=`${m}_${w}_c${i}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); txt(`${m}_${w}_total_plan_spend`,fRub(s.ps)); txt(`${m}_${w}_total_plan_leads`,fCount(s.pl)); txt(`${m}_${w}_total_fact_spend`,fRub(s.fs)); txt(`${m}_${w}_total_fact_leads`,fCount(s.fl)); txt(`${m}_${w}_total_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_${w}_total_fact_cpl`,fRub(cplValue(s.fs,s.fl))); badge(`${m}_${w}_total_perc_spend`,s.ps,s.fs,true); badge(`${m}_${w}_total_perc_leads`,s.pl,s.fl); badge(`${m}_${w}_total_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true); }
+function calcChannelGrand(mI,cI){ 
+      let ps=0,pl=0,fs=0,fl=0; 
+      const weeks=monthsData[mI].weeks; 
+      
+      // 1. Суммируем данные по неделям
+      weeks.forEach((w,wI)=>{ 
+          const id=`m${mI}_w${wI}_c${cI}`; 
+          ps+=inputState[`${id}_plan_spend`]||0; 
+          pl+=inputState[`${id}_plan_leads`]||0; 
+          fs+=inputState[`${id}_fact_spend`]||0; 
+          fl+=inputState[`${id}_fact_leads`]||0; 
+      }); 
+      
+      // 2. Расчет прогноза (для текстового поля)
+      let totalDays=0, activeDays=0; 
+      weeks.forEach((w,wI)=>{ 
+          const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
+          if(daysArr.length>0){ 
+              daysArr.forEach((d,dI)=>{ 
+                  const dId=`m${mI}_w${wI}_d${dI}_c${cI}`; 
+                  if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; 
+              }); 
+          } else { 
+              const wfs=inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0; 
+              const wfl=inputState[`m${mI}_w${wI}_c${cI}_fact_leads`]||0; 
+              if(wfs>0||wfl>0) activeDays+=7; 
+          } 
+      }); 
+      const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
+      
+      // 3. Вывод цифр (Факт / План)
+      txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); 
+      txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
+      
+      txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); 
+      txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
+      
+      const pcpl = cplValue(ps,pl);
+      const fcpl = cplValue(fs,fl);
+      txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); 
+      txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
+      txt(`m${mI}_c${cI}_mini_forecast`,fCount(fc)); 
+
+      // === 4. УМНАЯ ЛОГИКА ЦВЕТОВ (С учетом времени) ===
+      
+      // Получаем прогресс времени для конкретного месяца (0.0 ... 1.0)
+      const timeProgress = getMonthTimeProgress(monthsData[mI].name);
+
+      const setMiniBadge = (id, plan, fact, invert, isRate) => {
+         const el = document.getElementById(id);
+         if(!el) return;
+         
+         if(plan <= 0) { el.className=''; el.innerText=''; return; }
+         
+         const completion = fact / plan; // 0.5 = 50%
+         const pShow = Math.round(completion * 100);
+         
+         el.innerText = pShow + '%';
+         el.className = 'mini-perc';
+         
+         // Определяем цель для сравнения
+         // Если это CPL (isRate = true), мы всегда сравниваем с 100% плана, время не важно.
+         // Если это Лиды/Расход, мы сравниваем с timeProgress (сколько прошло времени).
+         const targetProgress = isRate ? 1.0 : timeProgress; 
+         
+         const tolerance = 0.1; // Допуск 10%
+         let status = 'bad';
+
+         if(invert) {
+             // Для Расхода и CPL (Меньше = Лучше/Норма)
+             // Если мы потратили меньше или ровно столько, сколько прошло времени — это ОК.
+             if (completion <= targetProgress) status = 'good'; 
+             else if (completion <= (targetProgress + tolerance)) status = 'warning'; 
+             else status = 'bad';
+         } else {
+             // Для Лидов (Больше = Лучше)
+             // Если мы сделали больше или ровно столько, сколько прошло времени — это ОК.
+             if (completion >= targetProgress) status = 'good';
+             else if (completion >= (targetProgress - tolerance)) status = 'warning';
+             else status = 'bad';
+         }
+
+         if(status === 'good') el.classList.add('good');
+         else if(status === 'warning') el.classList.add('warning');
+         else el.classList.add('bad');
+      };
+
+      // Применяем расчет
+      // Расход: Invert=True (не превышать график), IsRate=False (зависит от времени)
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false);    
+      
+      // Лиды: Invert=False (чем больше тем лучше), IsRate=False (зависит от времени)
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false);   
+      
+      // CPL: Invert=True (чем меньше тем лучше), IsRate=True (НЕ зависит от времени, цена всегда одна)
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); 
+  }
+  function calcGrand(m){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); const chs=monthsData[mI].channels||[]; monthsData[mI].weeks.forEach((_,wI)=>{ chs.forEach((_,cI)=>{ const id=`${m}_w${wI}_c${cI}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); }); txt(`${m}_stat_ps`,fRub(s.ps)); txt(`${m}_stat_fs`,fRub(s.fs)); txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_stat_percs`,(s.ps>0?Math.round((s.fs/s.ps)*100):0)+"%"); txt(`${m}_stat_percl`,(s.pl>0?Math.round((s.fl/s.pl)*100):0)+"%"); const pCpl=cplValue(s.ps,s.pl); const fCpl=cplValue(s.fs,s.fl); const elPerc=document.getElementById(`${m}_stat_perccpl`); if(elPerc){ if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; else { const pc=Math.round((fCpl/pCpl)*100); const col=pc<=100?'#30D158':'#FF453A'; elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; } } let totalDays=0, activeDays=0; monthsData[mI].weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ let act=false; chs.forEach((_,cI)=>{ const dId=`${m}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0||(inputState[`${dId}_leads`]||0)>0) act=true; }); if(act) activeDays++; }); } else { let act=false; chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); if(act) activeDays+=7; } }); const fc=activeDays>0?Math.round((s.fl/activeDays)*totalDays):0; txt(`${m}_stat_forecast`,fCount(fc)); }
+  function recalcAll(){ monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> (m.channels||[]).forEach((c,cI)=>{ calcDaysToWeek(mI, wI, cI); calcRow(`m${mI}_w${wI}_c${cI}`); }))); monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> calcWeekTotal(`m${mI}`, `w${wI}`))); monthsData.forEach((m,mI)=> { calcGrand(`m${mI}`); (m.channels||[]).forEach((c,cI)=> calcChannelGrand(mI, cI)); }); }
+
+  // --- SMM CALC ---
+  function getSMMKey(mI, cI, wI, metricName, type) { return `smm_m${mI}_c${cI}_w${wI}_${slugify(metricName)}_${type}`; }
+  function getSMMDayKey(mI, cI, wI, dI, metricName) { return `smm_m${mI}_c${cI}_w${wI}_d${dI}_${slugify(metricName)}`; }
+  function makeSMMCells(mI, cI, wI, type, metrics){ let html = ''; metrics.forEach(metricName => { const kind = isPercentMetric(metricName) ? 'percent' : 'count'; const key = getSMMKey(mI, cI, wI, metricName, type); const val = inputState[key]; const shown = (kind==='percent') ? formatPercent(val) : formatCount(val); html += `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${key}" data-kind="${kind}" value="${shown}" placeholder="-"></td>`; }); return html; }
+  function makeSMMDayCells(mI, cI, wI, dI, metrics){ let html = ''; metrics.forEach(metricName => { const kind = isPercentMetric(metricName) ? 'percent' : 'count'; const key = getSMMDayKey(mI, cI, wI, dI, metricName); const val = inputState[key]; const shown = (kind==='percent') ? formatPercent(val) : formatCount(val); html += `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${key}" data-kind="${kind}" value="${shown}" placeholder="-"></td>`; }); return html; }
+  function makeSMMPercCells(mI, cI, wI, metrics){ let html = ''; metrics.forEach(metricName => { const id = `smm_perc_m${mI}_c${cI}_w${wI}_${slugify(metricName)}`; html += `<td><div id="${id}" class="badge badge-neutral">-</div></td>`; }); return html; }
+  function recalcSMM(id) { const parts = id.split('_'); let mI, cI, wI; parts.forEach(p => { if(p.startsWith('m') && !isNaN(parseInt(p.substr(1)))) mI = parseInt(p.substr(1)); if(p.startsWith('c') && !isNaN(parseInt(p.substr(1)))) cI = parseInt(p.substr(1)); if(p.startsWith('w') && !isNaN(parseInt(p.substr(1)))) wI = parseInt(p.substr(1)); }); if (mI !== undefined && cI !== undefined && wI !== undefined) { calcSMMDaysToWeek(mI, cI, wI); calcSMMRowPerc(mI, cI, wI); calcSMMGrand(mI); calcSMMChannelTotal(mI, cI); } }
+function calcSMMDaysToWeek(mI, cI, wI) {
+    const month = monthsData[mI];
+    if(!month) return;
+    const days = month.weeks[wI].days || [];
+    const ch = month.smmChannels[cI];
+    if(!ch) return;
+
+    // 1. Сначала пробуем рассчитать "Взвешенный ERR" на основе дней
+    const reachMet = findReachMetricName(ch.metrics);
+    const errMet = findErrMetricName(ch.metrics);
+    let weightedErrFact = null; // Пока null, если рассчитать нельзя
+
+    if (reachMet && errMet) {
+        let totalReactions = 0;
+        let totalReach = 0;
+        
+        days.forEach((d, dI) => {
+            const rKey = getSMMDayKey(mI, cI, wI, dI, reachMet);
+            const eKey = getSMMDayKey(mI, cI, wI, dI, errMet);
+            
+            // Берем сырые значения (числа) из inputState
+            // Важно: parseFloat, так как там могут быть строки
+            const rVal = inputState[rKey]; 
+            const eVal = inputState[eKey];
+
+            const r = (rVal !== undefined && rVal !== "") ? (+rVal) : 0;
+            const e = (eVal !== undefined && eVal !== "") ? (+eVal) : 0;
+
+            if (r > 0) {
+                totalReactions += r * (e / 100); // Восстанавливаем реакции за день
+                totalReach += r;
+            }
+        });
+
+        if (totalReach > 0) {
+            weightedErrFact = (totalReactions / totalReach) * 100;
+        }
+    }
+
+    // 2. Проходим по всем метрикам и обновляем строку "ФАКТ" недели
+    ch.metrics.forEach(metricName => {
+        const isPct = isPercentMetric(metricName);
+        const isErr = metricName.toLowerCase().includes('err');
+        
+        let sum = 0;
+        let cnt = 0;
+
+        // ЛОГИКА ВЫБОРА:
+        // Если это ERR и у нас есть успешно рассчитанный взвешенный факт -> берем его.
+        if (isErr && weightedErrFact !== null) {
+            sum = weightedErrFact;
+        } else {
+            // ИНАЧЕ -> Старая логика (сумма или простое среднее)
+            days.forEach((d, dI) => {
+                const key = getSMMDayKey(mI, cI, wI, dI, metricName);
+                const val = inputState[key];
+                if (val !== undefined && val !== null && val !== '') {
+                    sum += (+val || 0);
+                    cnt += 1;
+                }
+            });
+            
+            // Если это процент (но не ERR, который мы обработали выше), считаем среднее арифметическое
+            // Например "% Дочитываний" - его пока считаем как среднее, если нет метрики "Открытия"
+            if (isPct && cnt > 0) {
+                sum = sum / cnt;
+            }
+        }
+
+        // Записываем результат в стейт (ФАКТ недели)
+        const factKey = getSMMKey(mI, cI, wI, metricName, 'fact');
+        inputState[factKey] = sum;
+
+        // Обновляем инпут в таблице визуально
+        const el = document.querySelector(`input[data-id="${factKey}"]`);
+        if (el) {
+            // Не обновляем, если пользователь прямо сейчас редактирует саму ячейку недели (редкий кейс)
+            if (document.activeElement !== el) {
+                el.value = isPct ? formatPercent(sum) : formatCount(sum);
+            }
+        }
+    });
+}
+  function calcSMMRowPerc(mI, cI, wI) { const ch = monthsData[mI].smmChannels[cI]; if(!ch) return; ch.metrics.forEach(metricName => { const plan = inputState[getSMMKey(mI, cI, wI, metricName, 'plan')] || 0; const fact = inputState[getSMMKey(mI, cI, wI, metricName, 'fact')] || 0; const badgeId = `smm_perc_m${mI}_c${cI}_w${wI}_${slugify(metricName)}`; badge(badgeId, plan, fact); }); }
+// --- ОБНОВЛЕННАЯ ФУНКЦИЯ РАСЧЕТА ШАПКИ SMM ---
+function calcSMMGrand(mI) {
+    const month = monthsData[mI];
+    if (!month) return;
+
+    let totalReach = { p: 0, f: 0 };
+    let totalLeads = { p: 0, f: 0 };
+    
+    // Накопители для взвешенного ERR
+    let errCalc = { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 };
+
+    (month.smmChannels || []).forEach((ch, cI) => {
+        // 1. Считаем обычные суммы (Охват и Лиды)
+        ch.metrics.forEach(met => {
+            const l = met.toLowerCase();
+            const isReach = l.includes('охват') || l.includes('показы') || l.includes('просмотры');
+            const isLeads = l.includes('лиды');
+
+            if (isReach || isLeads) {
+                month.weeks.forEach((w, wI) => {
+                    const valP = inputState[getSMMKey(mI, cI, wI, met, 'plan')] || 0;
+                    const valF = inputState[getSMMKey(mI, cI, wI, met, 'fact')] || 0;
+                    if (isReach) { totalReach.p += valP; totalReach.f += valF; }
+                    if (isLeads) { totalLeads.p += valP; totalLeads.f += valF; }
+                });
+            }
+        });
+
+        // 2. Считаем реакции для ERR (Обратный инжиниринг)
+        const reachMet = findReachMetricName(ch.metrics);
+        const errMet = findErrMetricName(ch.metrics);
+
+        if (reachMet && errMet) {
+            month.weeks.forEach((w, wI) => {
+                // ПЛАН
+                const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0;
+                const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0;
+                if (rP > 0) {
+                    errCalc.pReactions += rP * (eP / 100);
+                    errCalc.pReach += rP;
+                }
+                // ФАКТ
+                const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0;
+                const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0;
+                if (rF > 0) {
+                    errCalc.fReactions += rF * (eF / 100);
+                    errCalc.fReach += rF;
+                }
+            });
+        }
+    });
+
+    // Вывод цифр в шапку
+    txt(`smm_m${mI}_stat_reach_p`, fCount(totalReach.p));
+    txt(`smm_m${mI}_stat_reach_f`, fCount(totalReach.f));
+    txt(`smm_m${mI}_stat_leads_p`, fCount(totalLeads.p));
+    txt(`smm_m${mI}_stat_leads_f`, fCount(totalLeads.f));
+
+    // Расчет финального ERR
+    const wErrP = errCalc.pReach > 0 ? (errCalc.pReactions / errCalc.pReach) * 100 : 0;
+    const wErrF = errCalc.fReach > 0 ? (errCalc.fReactions / errCalc.fReach) * 100 : 0;
+
+    txt(`smm_m${mI}_stat_err_p`, formatPercent(wErrP));
+    txt(`smm_m${mI}_stat_err_f`, formatPercent(wErrF));
+
+    // Светофоры (прогресс бары)
+    const timeProgress = getMonthTimeProgress(month.name);
+    
+    const renderStatus = (elId, plan, fact, isRate) => {
+        const el = document.getElementById(elId);
+        if(!el) return;
+        if(plan <= 0) { el.innerHTML='<span style="opacity:0.5">-</span>'; return; }
+        const completion = fact/plan; 
+        const target = isRate ? 1.0 : timeProgress;
+        let st = 'bad';
+        if(completion >= target) st='good'; else if(completion >= target-0.1) st='warning';
+        const cls = st==='good'?'trend-good':(st==='warning'?'trend-warning':'trend-bad');
+        el.innerHTML = `<span class="${cls}">${Math.round(completion*100)}%</span>`;
+    };
+
+    renderStatus(`smm_m${mI}_stat_reach_perc`, totalReach.p, totalReach.f, false);
+    renderStatus(`smm_m${mI}_stat_leads_perc`, totalLeads.p, totalLeads.f, false);
+    renderStatus(`smm_m${mI}_stat_err_perc`, wErrP, wErrF, true);
+}
+  // === НОВАЯ ФУНКЦИЯ ДЛЯ SMM СВОДКИ ===
+function calcSMMChannelTotal(mI, cI) {
+    const month = monthsData[mI];
+    if (!month || !month.smmChannels[cI]) return;
+    
+    const channel = month.smmChannels[cI];
+    const timeProgress = getMonthTimeProgress(month.name); 
+
+    // Ищем пару Охват/ERR для этого канала
+    const reachMet = findReachMetricName(channel.metrics);
+    const errMet = findErrMetricName(channel.metrics);
+    
+    let channelErrStats = { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 };
+    let hasErrPair = false;
+
+    // Собираем данные для взвешенного ERR
+    if (reachMet && errMet) {
+        hasErrPair = true;
+        month.weeks.forEach((w, wI) => {
+            const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0;
+            const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0;
+            const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0;
+            const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0;
+
+            if(rP > 0) { channelErrStats.pReactions += rP * (eP/100); channelErrStats.pReach += rP; }
+            if(rF > 0) { channelErrStats.fReactions += rF * (eF/100); channelErrStats.fReach += rF; }
+        });
+    }
+
+    channel.metrics.forEach(met => {
+        const slug = slugify(met);
+        const isPct = isPercentMetric(met);
+        const isErr = met.toLowerCase().includes('err');
+
+        let sumFact = 0;
+        let sumPlan = 0;
+        
+        // Если это ERR и есть пара Охват - используем взвешивание
+        if (isErr && hasErrPair) {
+            sumPlan = channelErrStats.pReach > 0 ? (channelErrStats.pReactions / channelErrStats.pReach) * 100 : 0;
+            sumFact = channelErrStats.fReach > 0 ? (channelErrStats.fReactions / channelErrStats.fReach) * 100 : 0;
+        } else {
+            // Иначе - обычное суммирование или среднее арифметическое
+            let weeksCount = 0;
+            month.weeks.forEach((w, wI) => {
+                const vP = inputState[getSMMKey(mI, cI, wI, met, 'plan')];
+                const vF = inputState[getSMMKey(mI, cI, wI, met, 'fact')];
+                if (vP !== undefined || vF !== undefined) {
+                    sumPlan += (vP || 0);
+                    sumFact += (vF || 0);
+                    weeksCount++;
+                }
+            });
+            if (isPct && !isErr && weeksCount > 0) {
+                sumPlan /= weeksCount;
+                sumFact /= weeksCount;
+            }
+        }
+
+        // Рендер чипов
+        const elF = document.getElementById(`smm_mini_f_m${mI}_c${cI}_${slug}`);
+        const elP = document.getElementById(`smm_mini_p_m${mI}_c${cI}_${slug}`);
+        
+        if (elF) elF.innerText = isPct ? formatPercent(sumFact) : formatCount(sumFact);
+        if (elP) elP.innerText = "/ " + (isPct ? formatPercent(sumPlan) : formatCount(sumPlan));
+        
+        const elPerc = document.getElementById(`smm_mini_perc_m${mI}_c${cI}_${slug}`);
+        if (elPerc) {
+            if (sumPlan <= 0) {
+                elPerc.innerText = ''; elPerc.className = '';
+            } else {
+                const completion = sumFact / sumPlan;
+                elPerc.innerText = Math.round(completion * 100) + '%';
+                elPerc.className = 'mini-perc';
+
+                // Для ERR цель всегда 100% (isRate=true), для остального - timeProgress
+                const target = isPct ? 1.0 : timeProgress;
+                const tolerance = 0.1; 
+                let status = 'bad';
+                if (completion >= target) status = 'good';
+                else if (completion >= (target - tolerance)) status = 'warning';
+                
+                elPerc.classList.add(status);
+            }
+        }
+    });
+}
+function recalcAllSMM() { 
+    monthsData.forEach((m,mI)=> { 
+        (m.smmChannels||[]).forEach((ch,cI)=> { 
+            m.weeks.forEach((w,wI)=> { 
+                calcSMMDaysToWeek(mI,cI,wI); 
+                calcSMMRowPerc(mI,cI,wI); 
+            }); 
+            calcSMMChannelTotal(mI, cI);
+        }); 
+        
+        calcSMMGrand(mI); 
+        
+        // === ВЫЗОВ РАСЧЕТА СВОДНОЙ ТАБЛИЦЫ ===
+        calcSMMMonthTotal(mI);
+        // =====================================
+    }); 
+}
+  function softUpdateUI() {
+      Object.keys(inputState).forEach(key => {
+          const el = document.getElementById(key);
+          if (el && document.activeElement !== el) {
+              const kind = el.dataset.kind || 'count';
+              const val = inputState[key];
+              if (kind === 'money') el.value = formatMoney(val);
+              else if (kind === 'percent') el.value = formatPercent(val);
+              else el.value = formatCount(val);
+          }
+      });
+      recalcAll(); 
+      recalcAllSMM();
+      renderOverview();
+  }
+
+  function getUiHash(state) {
+      return Object.keys(state).filter(k => k.startsWith('ui_')).sort().map(k => k + ':' + state[k]).join('|');
+  }
+
+  let lastMonthsJson = "";
+  let lastUiHash = "";
+  let dbListenerRef = null;
+
+function initFirebaseListener(callback) {
+    if(dbListenerRef) db.ref('kpi_project').off('value', dbListenerRef);
+
+    // Добавляем второй аргумент - функцию обработки ошибок
+    dbListenerRef = db.ref('kpi_project').on('value', 
+        (snapshot) => {
+            // === УСПЕХ ===
+            const data = snapshot.val();
+            if (data) {
+                const newMonthsData = data.monthsData || [];
+                inputState = data.inputState || {};
+                
+                const newJson = JSON.stringify(newMonthsData);
+                const newUiHash = getUiHash(inputState);
+                
+                const isStructureChanged = newJson !== lastMonthsJson;
+                const isUiChanged = newUiHash !== lastUiHash;
+                
+                monthsData = newMonthsData;
+                lastMonthsJson = newJson;
+                lastUiHash = newUiHash;
+
+                if (isStructureChanged || isUiChanged) {
+                    renderTraffic();
+                    renderSMM();
+                } else {
+                    softUpdateUI();
+                }
+                renderOverview();
+            } else {
+                if (monthsData.length === 0) addNewMonth();
+            }
+
+            // Обновляем статус
+            const statusText = document.getElementById('statusText');
+            if(statusText) statusText.innerText = "Онлайн";
+            document.querySelector('.status-dot').style.background = "#10B981";
+            document.querySelector('.save-status').classList.add('online');
+            
+            // Сообщаем, что доступ есть
+            if(callback) callback(true);
+        },
+        (error) => {
+            // === ОШИБКА (НЕТ ПРАВ) ===
+            console.log("Firebase Error:", error.code);
+            // Если ошибка прав доступа - сообщаем коллбеку false
+            if(callback) callback(false);
+        }
+    );
+  }
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
+(function init(){
+      setupEventListeners();
+      window.addEventListener('resize', () => { applyResponsiveTableWidths(); });
+
+      auth.onAuthStateChanged((user) => {
+          const overlay = document.getElementById('loginOverlay');
+          const emailDisplay = document.getElementById('userEmailDisplay');
+          const wrongAccBtn = document.getElementById('wrongAccLogout');
+          const statusText = document.getElementById('statusText');
+          const title = document.querySelector('#loginOverlay h2');
+          const msg = document.querySelector('#loginOverlay p');
+          const loginBtn = document.querySelector('#loginOverlay button:not(#wrongAccLogout)');
+
+          if (user) {
+              // 1. Пользователь вошел в Google
+              console.log("User logged in:", user.email);
+              
+              // Визуально скрываем оверлей (но пока не удаляем, вдруг прав нет)
+              overlay.style.opacity = '0';
+              setTimeout(() => { overlay.style.display = 'none'; }, 300);
+
+              // 2. Пытаемся подключиться к данным
+              initFirebaseListener((accessGranted) => {
+                  if (!accessGranted) {
+                      // ОШИБКА ДОСТУПА (Сервер отклонил запрос)
+                      console.error("Access Denied by Firebase Rules");
+                      
+                      // Возвращаем экран блокировки
+                      overlay.style.display = 'flex';
+                      setTimeout(() => { overlay.style.opacity = '1'; }, 10);
+                      
+                      title.innerText = "Доступ запрещен";
+                      msg.innerText = "Вашего email нет в белом списке базы данных.";
+                      loginBtn.style.display = 'none';
+                      
+                      emailDisplay.innerText = `Вы вошли как: ${user.email}`;
+                      wrongAccBtn.style.display = 'inline-block';
+                      
+                      if(statusText) statusText.innerText = "Нет прав";
+                      document.querySelector('.status-dot').style.background = "#FF453A";
+                  }
+              });
+
+          } else {
+              // Пользователь не вошел
+              overlay.style.display = 'flex';
+              setTimeout(() => { overlay.style.opacity = '1'; }, 10);
+              title.innerText = "Доступ ограничен";
+              msg.innerText = "Войдите через Google аккаунт.";
+              loginBtn.style.display = 'inline-block';
+              emailDisplay.innerText = "";
+              wrongAccBtn.style.display = 'none';
+          }
+      });
+  })();
+</script>
+</body>
+</html>
