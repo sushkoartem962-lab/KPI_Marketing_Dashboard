@@ -424,7 +424,17 @@
                     <div class="stat-val" id="ov_curr_cpl">-</div>
                     <div class="stat-sub" id="ov_curr_cpl_perc">-</div>
                 </div>
-
+<div class="stat-box">
+    <div class="stat-label">Трафик: Выручка</div>
+    <div class="stat-val accent-text" id="ov_curr_rev">-</div>
+    <div class="stat-sub" id="ov_curr_rev_plan">План: -</div>
+    <div class="stat-sub" id="ov_curr_rev_perc" style="margin-top:6px; font-size:12px;"></div>
+</div>
+<div class="stat-box">
+    <div class="stat-label">Трафик: ДРР</div>
+    <div class="stat-val" id="ov_curr_drr">-</div>
+    <div class="stat-sub" id="ov_curr_drr_perc">-</div>
+</div>
                 <div class="stat-box">
                     <div class="stat-label">SMM: Лиды</div>
                     <div class="stat-val accent-text" id="ov_curr_smm_leads">-</div>
@@ -465,7 +475,18 @@
                     <canvas id="chartCPL"></canvas>
                 </div>
             </div>
-            
+            <div class="bento-card">
+    <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Выручка (Факт)</div>
+    <div class="chart-container">
+        <canvas id="chartTrafficRev"></canvas>
+    </div>
+</div>
+<div class="bento-card">
+    <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: ДРР (Факт %)</div>
+    <div class="chart-container">
+        <canvas id="chartDRR"></canvas>
+    </div>
+</div>
             <div class="bento-card">
                 <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Лиды (шт)</div>
                 <div class="chart-container">
@@ -1036,8 +1057,10 @@ function findErrMetricName(metrics) {
             <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
             <div class="mini-chip">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
             <div class="mini-chip">CPL: <strong><span id="m${mIndex}_c${cI}_mini_fcpl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pcpl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_cpl"></span></div>
-        </div></div></div>
-        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
+<div class="mini-chip">Rev: <strong><span id="m${mIndex}_c${cI}_mini_frev">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_prev">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_rev"></span></div>
+<div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_fdrr">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pdrr">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_drr"></span></div>
+</div></div></div>
+        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th><th>Выручка</th><th>ДРР</th></tr></thead><tbody>`;
 
         month.weeks.forEach((weekObj, wI) => {
           const rowId = `m${mIndex}_w${wI}`; 
@@ -1058,16 +1081,18 @@ function findErrMetricName(metrics) {
             const dayId = `${rowId}_d${dI}_c${cI}`;
             html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
              <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>
-             <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_spend" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
-             <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_leads" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>
-             <td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td></tr>`;
+             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
+             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>
+             <td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td>
+             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_revenue" data-kind="money" value="${formatMoney(inputState[`${dayId}_revenue`])}" placeholder="-"></td>
+             <td class="cpl-cell" style="opacity:0.3">-</td></tr>`;
           });
-          html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="5"></td></tr>`;
+          html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="7"></td></tr>`;
         });
         html += `</tbody></table></div></div>`;
       });
       // (Total card logic omitted for brevity, it stays same as before)
-      html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
+      html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th><th>Выручка</th><th>ДРР</th></tr></thead><tbody>`;
       month.weeks.forEach((weekObj, wI) => {
         const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
         html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},-1,${wI})">${caret}</button><div class="week-title-text">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="3"></td></tr>
@@ -1323,39 +1348,50 @@ function renderSMM() {
     recalcAllSMM();
 }
   // --- OVERVIEW RENDER ---
-  function renderOverview() {
+ function renderOverview() {
     const labels = [];
     const tfSpendF = [], tfSpendP = [];
     const tfLeadsF = [], tfLeadsP = [];
     const tfCplF = [], tfCplP = [];
+    // Новые массивы
+    const tfRevF = []; 
+    const tfDrrF = [];
     
     const smmLeadsF = [], smmLeadsP = [];
     const smmReachF = [], smmReachP = [];
     const smmSubsF = [], smmSubsP = [];
 
     const lastIdx = monthsData.length - 1;
-    let currStats = { s:0, ps:0, l:0, pl:0, cpl:0, pcpl:0, smmL:0, smmPL:0, smmR:0, smmPR:0, smmS:0, smmPS:0 };
+    let currStats = { s:0, ps:0, l:0, pl:0, cpl:0, pcpl:0, r:0, pr:0, drr:0, pdrr:0, smmL:0, smmPL:0, smmR:0, smmPR:0, smmS:0, smmPS:0 };
 
     monthsData.forEach((m, mI) => {
         labels.push(m.name);
         
-        let ps=0, pl=0, fs=0, fl=0;
+        let ps=0, pl=0, pr=0, fs=0, fl=0, fr=0;
         const chs = m.channels || [];
         m.weeks.forEach((_, wI) => {
             chs.forEach((_, cI) => {
                 const id = `m${mI}_w${wI}_c${cI}`;
                 ps += inputState[`${id}_plan_spend`] || 0;
                 pl += inputState[`${id}_plan_leads`] || 0;
+                pr += inputState[`${id}_plan_revenue`] || 0;
                 fs += inputState[`${id}_fact_spend`] || 0;
                 fl += inputState[`${id}_fact_leads`] || 0;
+                fr += inputState[`${id}_fact_revenue`] || 0;
             });
         });
         
         tfSpendF.push(fs); tfSpendP.push(ps);
         tfLeadsF.push(fl); tfLeadsP.push(pl);
+        tfRevF.push(fr); // План выручки в график не добавляем по просьбе
+        
         const cpl = (fs > 0 && fl > 0) ? Math.round(fs / fl) : 0;
         const pcpl = (ps > 0 && pl > 0) ? Math.round(ps / pl) : 0;
         tfCplF.push(cpl); tfCplP.push(pcpl);
+        
+        const drr = (fr > 0) ? (fs / fr) * 100 : 0;
+        const pdrr = (pr > 0) ? (ps / pr) * 100 : 0;
+        tfDrrF.push(drr); // План ДРР в график не добавляем
 
         let reachF=0, reachP=0; 
         let leadsF=0, leadsP=0;
@@ -1382,7 +1418,10 @@ function renderSMM() {
         smmSubsF.push(subsF);   smmSubsP.push(subsP);
 
         if(mI === lastIdx) {
-            currStats = { s:fs, ps:ps, l:fl, pl:pl, cpl:cpl, pcpl:pcpl, smmL: leadsF, smmPL: leadsP, smmR: reachF, smmPR: reachP, smmS: subsF, smmPS: subsP };
+            currStats = { 
+                s:fs, ps:ps, l:fl, pl:pl, cpl:cpl, pcpl:pcpl, r:fr, pr:pr, drr:drr, pdrr:pdrr,
+                smmL: leadsF, smmPL: leadsP, smmR: reachF, smmPR: reachP, smmS: subsF, smmPS: subsP 
+            };
         }
     });
 
@@ -1402,7 +1441,19 @@ function renderSMM() {
         if(currStats.pcpl > 0 && currStats.cpl > 0) {
             renderDev(document.getElementById('ov_curr_cpl_perc'), currStats.pcpl, currStats.cpl, true, 1, true);
         } else { document.getElementById('ov_curr_cpl_perc').innerText = '-'; }
+        
+        // ВЫРУЧКА
+        document.getElementById('ov_curr_rev').innerText = formatMoney(currStats.r);
+        document.getElementById('ov_curr_rev_plan').innerText = `План: ${formatMoney(currStats.pr)}`;
+        renderDev(document.getElementById('ov_curr_rev_perc'), currStats.pr, currStats.r, false, timeProgress, false);
+        
+        // ДРР
+        document.getElementById('ov_curr_drr').innerText = formatDrr(currStats.drr);
+        if(currStats.pdrr > 0 && currStats.drr > 0) {
+            renderDev(document.getElementById('ov_curr_drr_perc'), currStats.pdrr, currStats.drr, true, 1, true);
+        } else { document.getElementById('ov_curr_drr_perc').innerText = '-'; }
 
+        // SMM
         document.getElementById('ov_curr_smm_leads').innerText = formatCount(currStats.smmL);
         document.getElementById('ov_curr_smm_leads_plan').innerText = `План: ${formatCount(currStats.smmPL)}`;
         renderDev(document.getElementById('ov_curr_smm_leads_perc'), currStats.smmPL, currStats.smmL, false, timeProgress, false);
@@ -1415,8 +1466,9 @@ function renderSMM() {
         document.getElementById('ov_curr_smm_reach_plan').innerText = `План: ${formatCount(currStats.smmPR)}`;
         renderDev(document.getElementById('ov_curr_smm_reach_perc'), currStats.smmPR, currStats.smmR, false, timeProgress, false);
     }
-    initCharts(labels, tfSpendF, tfSpendP, tfLeadsF, tfLeadsP, tfCplF, tfCplP, smmLeadsF, smmLeadsP, smmReachF, smmReachP, smmSubsF, smmSubsP);
-  }
+    // Передаем новые данные в чарты
+    initCharts(labels, tfSpendF, tfSpendP, tfLeadsF, tfLeadsP, tfCplF, tfCplP, tfRevF, tfDrrF, smmLeadsF, smmLeadsP, smmReachF, smmReachP, smmSubsF, smmSubsP);
+}
 
   function renderDev(el, plan, fact, invert, timeProgress = 1, isRate = false) {
      if(plan <= 0) { el.innerText = ''; return; }
@@ -1444,13 +1496,18 @@ function renderSMM() {
      el.innerHTML = `<span class="${cls}">${pShow}%</span> выполнения`;
   }
 
-  function initCharts(labels, sF, sP, lF, lP, cF, cP, slF, slP, srF, srP, ssF, ssP) {
-     createLineChart('chartTrafficSpend', labels, 'Расход Факт', sF, '#3B82F6', 'Расход План', sP);
-     createLineChart('chartTrafficLeads', labels, 'Лиды Факт', lF, '#30D158', 'Лиды План', lP);
-     createLineChart('chartCPL', labels, 'CPL Факт', cF, '#F59E0B', 'CPL План', cP);
-     createLineChart('chartSMMLeads', labels, 'SMM Лиды Факт', slF, '#A855F7', 'SMM Лиды План', slP);
-     createLineChart('chartSMMSubs', labels, 'Приток Факт', ssF, '#EC4899', 'Приток План', ssP);
-     createLineChart('chartSMMReach', labels, 'Охват Факт', srF, '#6366F1', 'Охват План', srP);
+  function initCharts(labels, sF, sP, lF, lP, cF, cP, rF, dF, slF, slP, srF, srP, ssF, ssP) {
+      createLineChart('chartTrafficSpend', labels, 'Расход Факт', sF, '#3B82F6', 'Расход План', sP);
+      createLineChart('chartTrafficLeads', labels, 'Лиды Факт', lF, '#30D158', 'Лиды План', lP);
+      createLineChart('chartCPL', labels, 'CPL Факт', cF, '#F59E0B', 'CPL План', cP);
+      
+      // Новые графики (без плана)
+      createLineChart('chartTrafficRev', labels, 'Выручка Факт', rF, '#10B981', null, []); 
+      createLineChart('chartDRR', labels, 'ДРР Факт %', dF, '#EC4899', null, []);
+
+      createLineChart('chartSMMLeads', labels, 'SMM Лиды Факт', slF, '#A855F7', 'SMM Лиды План', slP);
+      createLineChart('chartSMMSubs', labels, 'Приток Факт', ssF, '#EC4899', 'Приток План', ssP);
+      createLineChart('chartSMMReach', labels, 'Охват Факт', srF, '#6366F1', 'Охват План', srP);
   }
 
   function createLineChart(canvasId, labels, label1, data1, color1, label2, data2) {
@@ -1470,6 +1527,15 @@ function renderSMM() {
   // ==========================================
   // 7. CALC LOGIC
   // ==========================================
+  function drrValue(spend, rev) {
+    spend = +spend || 0; rev = +rev || 0;
+    if (rev === 0) return 0;
+    return (spend / rev) * 100;
+}
+function formatDrr(n) {
+    if(!n || n === 0) return "-";
+    return NFP.format(n) + "%";
+}
   function recalc(id){
     const parts=id.split('_'); let mI=-1,wI=-1,cI=-1;
     if(id.includes('_d')){
@@ -1482,51 +1548,155 @@ function renderSMM() {
     }
     if(mI>=0&&wI>=0&&cI>=0) { calcRow(`m${mI}_w${wI}_c${cI}`); calcWeekTotal(`m${mI}`,`w${wI}`); calcChannelGrand(mI,cI); calcGrand(`m${mI}`); }
   }
-  function calcDaysToWeek(mI, wI, cI) {
-    const month=monthsData[mI]; if(!month) return; const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
+function calcDaysToWeek(mI, wI, cI) {
+    const month=monthsData[mI]; if(!month) return; 
+    const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
     const days=weekObj.days; const rowId=`m${mI}_w${wI}`;
-    const planSpend=inputState[`${rowId}_c${cI}_plan_spend`]||0; const planLeads=inputState[`${rowId}_c${cI}_plan_leads`]||0;
-    const dayTargetS=planSpend>0?(planSpend/7):0; const dayTargetL=planLeads>0?(planLeads/7):0; const targetCPL=planLeads>0?(planSpend/planLeads):0;
-    let sumS=0, sumL=0;
+    
+    // План для валидации (подсветки)
+    const planSpend=inputState[`${rowId}_c${cI}_plan_spend`]||0; 
+    const planLeads=inputState[`${rowId}_c${cI}_plan_leads`]||0;
+    const dayTargetS=planSpend>0?(planSpend/7):0; 
+    const dayTargetL=planLeads>0?(planLeads/7):0; 
+    const targetCPL=planLeads>0?(planSpend/planLeads):0;
+    
+    let sumS=0, sumL=0, sumR=0;
+    
     days.forEach((d,dI)=>{
-        const dayId=`${rowId}_d${dI}_c${cI}`; const valS=inputState[`${dayId}_spend`]||0; const valL=inputState[`${dayId}_leads`]||0;
-        sumS+=valS; sumL+=valL;
-        const elS=document.getElementById(`${dayId}_spend`); const elL=document.getElementById(`${dayId}_leads`); const elC=document.getElementById(`${dayId}_cpl`);
+        const dayId=`${rowId}_d${dI}_c${cI}`; 
+        const valS=inputState[`${dayId}_spend`]||0; 
+        const valL=inputState[`${dayId}_leads`]||0;
+        const valR=inputState[`${dayId}_revenue`]||0;
+        
+        sumS+=valS; sumL+=valL; sumR+=valR;
+        
+        // Валидация ячеек (цвета)
+        const elS=document.querySelector(`input[data-id="${dayId}_spend"]`); 
+        const elL=document.querySelector(`input[data-id="${dayId}_leads"]`); 
+        const elC=document.getElementById(`${dayId}_cpl`);
+        
         if(elS && elL){
-            elS.classList.remove('smart-input-bad','smart-input-good'); elL.classList.remove('smart-input-bad','smart-input-good');
+            elS.classList.remove('smart-input-bad','smart-input-good'); 
+            elL.classList.remove('smart-input-bad','smart-input-good');
+            
             if(valS>0 && dayTargetS>0 && valS>dayTargetS*1.15) elS.classList.add('smart-input-bad');
-            if(planLeads>0){ if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); }
-            if(valL>0){ const dc=Math.round(valS/valL); let cls="day-cpl-neutral"; if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; }
-            else elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
+            if(planLeads>0){ 
+                if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); 
+                else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); 
+            }
+            if(valL>0){ 
+                const dc=Math.round(valS/valL); 
+                let cls="day-cpl-neutral"; 
+                if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } 
+                elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; 
+            } else {
+                elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
+            }
         }
     });
-    inputState[`${rowId}_c${cI}_fact_spend`]=sumS; inputState[`${rowId}_c${cI}_fact_leads`]=sumL;
-    const wInpS=document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value=formatMoney(sumS);
-    const wInpL=document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value=formatCount(sumL);
-  }
-  function makeCells(rowId,cI,type){ const id=`${rowId}_c${cI}`; const vS=inputState[id+`_${type}_spend`]||''; const vL=inputState[id+`_${type}_leads`]||''; return `<td><input type="text" inputmode="numeric" class="cell-input ${type}-spend" id="${id}_${type.charAt(0)}s" data-id="${id}_${type}_spend" data-kind="money" value="${formatMoney(vS)}" placeholder="-"></td><td><input type="text" inputmode="numeric" class="cell-input ${type}-leads" id="${id}_${type.charAt(0)}l" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vL)}" placeholder="-"></td><td class="cpl-cell" id="${id}_${type}_cpl">-</td>`; }
-  function makeTotalCells(rowId,type){ return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td><td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td><td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>`; }
-  function makePercCells(rowId,cI){ return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>`; }
-  function makeTotalPercCells(rowId){ return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>`; }
+    
+    // Сохраняем факты недели
+    inputState[`${rowId}_c${cI}_fact_spend`]=sumS; 
+    inputState[`${rowId}_c${cI}_fact_leads`]=sumL;
+    inputState[`${rowId}_c${cI}_fact_revenue`]=sumR;
+    
+    // Обновляем инпуты недели
+    const wInpS=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_spend"]`); if(wInpS) wInpS.value=formatMoney(sumS);
+    const wInpL=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_leads"]`); if(wInpL) wInpL.value=formatCount(sumL);
+    const wInpR=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_revenue"]`); if(wInpR) wInpR.value=formatMoney(sumR);
+}
+  function makeCells(rowId,cI,type){ 
+    const id=`${rowId}_c${cI}`; 
+    const vS=inputState[id+`_${type}_spend`]||''; 
+    const vL=inputState[id+`_${type}_leads`]||''; 
+    const vR=inputState[id+`_${type}_revenue`]||''; 
+    return `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_spend" data-kind="money" value="${formatMoney(vS)}" placeholder="-"></td>
+            <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vL)}" placeholder="-"></td>
+            <td class="cpl-cell" id="${id}_${type}_cpl">-</td>
+            <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_revenue" data-kind="money" value="${formatMoney(vR)}" placeholder="-"></td>
+            <td class="cpl-cell" id="${id}_${type}_drr">-</td>`; 
+}
+function makeTotalCells(rowId,type){ 
+    return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td>
+            <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td>
+            <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>
+            <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_revenue">-</td>
+            <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_drr">-</td>`; 
+}
+function makePercCells(rowId,cI){ 
+    return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_c${cI}_perc_revenue" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_c${cI}_perc_drr" class="badge badge-neutral">-</div></td>`; 
+}
+function makeTotalPercCells(rowId){ 
+    return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_revenue" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_drr" class="badge badge-neutral">-</div></td>`; 
+}
   function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
   function txt(id, v){ const el=document.getElementById(id); if(el) el.innerText=v; }
   function badge(id, plan, fact, invert=false){ const el=document.getElementById(id); if(!el) return; plan=+plan||0; fact=+fact||0; if(plan<=0){ el.className='badge badge-neutral'; el.innerText='-'; return; } const p=Math.round((fact/plan)*100); let cls='badge-neutral'; if(invert){ if(p<=100) cls='badge-good'; else cls='badge-bad'; } else { if(p>=100) cls='badge-good'; else cls='badge-bad'; } el.className=`badge ${cls}`; el.innerText=p+'%'; }
-  function calcRow(id){ const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); badge(`${id}_perc_spend`,ps,fs,true); badge(`${id}_perc_leads`,pl,fl); badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true); }
-  function calcWeekTotal(m,w){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); (monthsData[mI].channels||[]).forEach((_,i)=>{ const id=`${m}_${w}_c${i}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); txt(`${m}_${w}_total_plan_spend`,fRub(s.ps)); txt(`${m}_${w}_total_plan_leads`,fCount(s.pl)); txt(`${m}_${w}_total_fact_spend`,fRub(s.fs)); txt(`${m}_${w}_total_fact_leads`,fCount(s.fl)); txt(`${m}_${w}_total_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_${w}_total_fact_cpl`,fRub(cplValue(s.fs,s.fl))); badge(`${m}_${w}_total_perc_spend`,s.ps,s.fs,true); badge(`${m}_${w}_total_perc_leads`,s.pl,s.fl); badge(`${m}_${w}_total_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true); }
+  function calcRow(id){ 
+    const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; 
+    const pr=inputState[`${id}_plan_revenue`]||0;
+    
+    const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0;
+    const fr=inputState[`${id}_fact_revenue`]||0;
+    
+    // CPL
+    txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); 
+    txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); 
+    
+    // DRR
+    txt(`${id}_plan_drr`,formatDrr(drrValue(ps,pr)));
+    txt(`${id}_fact_drr`,formatDrr(drrValue(fs,fr)));
+    
+    // Badges
+    badge(`${id}_perc_spend`,ps,fs,true); 
+    badge(`${id}_perc_leads`,pl,fl); 
+    badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true);
+    badge(`${id}_perc_revenue`,pr,fr);
+    badge(`${id}_perc_drr`,drrValue(ps,pr),drrValue(fs,fr),true);
+}
+  function calcWeekTotal(m,w){ 
+    let s={ps:0,pl:0,pr:0, fs:0,fl:0,fr:0}; 
+    const mI=parseInt(m.replace('m','')); 
+    
+    (monthsData[mI].channels||[]).forEach((_,i)=>{ 
+        const id=`${m}_${w}_c${i}`; 
+        s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.pr+=inputState[`${id}_plan_revenue`]||0;
+        s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; s.fr+=inputState[`${id}_fact_revenue`]||0;
+    }); 
+    
+    const rowId = `${m}_${w}_total`;
+    
+    txt(`${rowId}_plan_spend`,fRub(s.ps)); txt(`${rowId}_plan_leads`,fCount(s.pl)); txt(`${rowId}_plan_revenue`,fRub(s.pr));
+    txt(`${rowId}_fact_spend`,fRub(s.fs)); txt(`${rowId}_fact_leads`,fCount(s.fl)); txt(`${rowId}_fact_revenue`,fRub(s.fr));
+    
+    txt(`${rowId}_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${rowId}_fact_cpl`,fRub(cplValue(s.fs,s.fl)));
+    txt(`${rowId}_plan_drr`,formatDrr(drrValue(s.ps,s.pr))); txt(`${rowId}_fact_drr`,formatDrr(drrValue(s.fs,s.fr)));
+    
+    badge(`${rowId}_perc_spend`,s.ps,s.fs,true); 
+    badge(`${rowId}_perc_leads`,s.pl,s.fl); 
+    badge(`${rowId}_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true);
+    badge(`${rowId}_perc_revenue`,s.pr,s.fr);
+    badge(`${rowId}_perc_drr`,drrValue(s.ps,s.pr),drrValue(s.fs,s.fr),true);
+}
 function calcChannelGrand(mI,cI){ 
-      let ps=0,pl=0,fs=0,fl=0; 
+      let ps=0,pl=0,pr=0, fs=0,fl=0,fr=0; 
       const weeks=monthsData[mI].weeks; 
       
-      // 1. Суммируем данные по неделям
       weeks.forEach((w,wI)=>{ 
           const id=`m${mI}_w${wI}_c${cI}`; 
-          ps+=inputState[`${id}_plan_spend`]||0; 
-          pl+=inputState[`${id}_plan_leads`]||0; 
-          fs+=inputState[`${id}_fact_spend`]||0; 
-          fl+=inputState[`${id}_fact_leads`]||0; 
+          ps+=inputState[`${id}_plan_spend`]||0; pl+=inputState[`${id}_plan_leads`]||0; pr+=inputState[`${id}_plan_revenue`]||0;
+          fs+=inputState[`${id}_fact_spend`]||0; fl+=inputState[`${id}_fact_leads`]||0; fr+=inputState[`${id}_fact_revenue`]||0;
       }); 
       
-      // 2. Расчет прогноза (для текстового поля)
+      // Прогноз (оставляем только для лидов, как было)
       let totalDays=0, activeDays=0; 
       weeks.forEach((w,wI)=>{ 
           const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
@@ -1536,79 +1706,56 @@ function calcChannelGrand(mI,cI){
                   if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; 
               }); 
           } else { 
-              const wfs=inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0; 
-              const wfl=inputState[`m${mI}_w${wI}_c${cI}_fact_leads`]||0; 
-              if(wfs>0||wfl>0) activeDays+=7; 
+              if((inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0)>0) activeDays+=7; 
           } 
       }); 
       const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
       
-      // 3. Вывод цифр (Факт / План)
-      txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); 
-      txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
+      // Вывод цифр
+      txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
+      txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
       
-      txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); 
-      txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
-      
-      const pcpl = cplValue(ps,pl);
-      const fcpl = cplValue(fs,fl);
-      txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); 
-      txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
+      const pcpl = cplValue(ps,pl); const fcpl = cplValue(fs,fl);
+      txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
       txt(`m${mI}_c${cI}_mini_forecast`,fCount(fc)); 
 
-      // === 4. УМНАЯ ЛОГИКА ЦВЕТОВ (С учетом времени) ===
-      
-      // Получаем прогресс времени для конкретного месяца (0.0 ... 1.0)
+      // НОВЫЕ МЕТРИКИ
+      txt(`m${mI}_c${cI}_mini_frev`,fRub(fr)); txt(`m${mI}_c${cI}_mini_prev`,"/ " + fRub(pr));
+      const pDrr = drrValue(ps,pr); const fDrr = drrValue(fs,fr);
+      txt(`m${mI}_c${cI}_mini_fdrr`,formatDrr(fDrr)); txt(`m${mI}_c${cI}_mini_pdrr`,"/ " + formatDrr(pDrr));
+
+      // ЦВЕТА (Chips)
       const timeProgress = getMonthTimeProgress(monthsData[mI].name);
-
       const setMiniBadge = (id, plan, fact, invert, isRate) => {
-         const el = document.getElementById(id);
-         if(!el) return;
-         
-         if(plan <= 0) { el.className=''; el.innerText=''; return; }
-         
-         const completion = fact / plan; // 0.5 = 50%
-         const pShow = Math.round(completion * 100);
-         
-         el.innerText = pShow + '%';
-         el.className = 'mini-perc';
-         
-         // Определяем цель для сравнения
-         // Если это CPL (isRate = true), мы всегда сравниваем с 100% плана, время не важно.
-         // Если это Лиды/Расход, мы сравниваем с timeProgress (сколько прошло времени).
-         const targetProgress = isRate ? 1.0 : timeProgress; 
-         
-         const tolerance = 0.1; // Допуск 10%
-         let status = 'bad';
-
-         if(invert) {
-             // Для Расхода и CPL (Меньше = Лучше/Норма)
-             // Если мы потратили меньше или ровно столько, сколько прошло времени — это ОК.
-             if (completion <= targetProgress) status = 'good'; 
-             else if (completion <= (targetProgress + tolerance)) status = 'warning'; 
-             else status = 'bad';
-         } else {
-             // Для Лидов (Больше = Лучше)
-             // Если мы сделали больше или ровно столько, сколько прошло времени — это ОК.
-             if (completion >= targetProgress) status = 'good';
-             else if (completion >= (targetProgress - tolerance)) status = 'warning';
-             else status = 'bad';
-         }
-
-         if(status === 'good') el.classList.add('good');
-         else if(status === 'warning') el.classList.add('warning');
-         else el.classList.add('bad');
+          const el = document.getElementById(id);
+          if(!el) return;
+          if(plan <= 0) { el.className=''; el.innerText=''; return; }
+          const completion = fact / plan;
+          const pShow = Math.round(completion * 100);
+          el.innerText = pShow + '%';
+          el.className = 'mini-perc';
+          const targetProgress = isRate ? 1.0 : timeProgress; 
+          const tolerance = 0.1; 
+          let status = 'bad';
+          if(invert) {
+              if (completion <= targetProgress) status = 'good'; 
+              else if (completion <= (targetProgress + tolerance)) status = 'warning'; 
+              else status = 'bad';
+          } else {
+              if (completion >= targetProgress) status = 'good';
+              else if (completion >= (targetProgress - tolerance)) status = 'warning';
+              else status = 'bad';
+          }
+          if(status === 'good') el.classList.add('good');
+          else if(status === 'warning') el.classList.add('warning');
+          else el.classList.add('bad');
       };
 
-      // Применяем расчет
-      // Расход: Invert=True (не превышать график), IsRate=False (зависит от времени)
       setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false);    
-      
-      // Лиды: Invert=False (чем больше тем лучше), IsRate=False (зависит от времени)
       setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false);   
-      
-      // CPL: Invert=True (чем меньше тем лучше), IsRate=True (НЕ зависит от времени, цена всегда одна)
       setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); 
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_rev`, pr, fr, false, false); // Выручка (чем больше тем лучше)
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_drr`, pDrr, fDrr, true, true); // ДРР (инверт, rate)
   }
   function calcGrand(m){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); const chs=monthsData[mI].channels||[]; monthsData[mI].weeks.forEach((_,wI)=>{ chs.forEach((_,cI)=>{ const id=`${m}_w${wI}_c${cI}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); }); txt(`${m}_stat_ps`,fRub(s.ps)); txt(`${m}_stat_fs`,fRub(s.fs)); txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_stat_percs`,(s.ps>0?Math.round((s.fs/s.ps)*100):0)+"%"); txt(`${m}_stat_percl`,(s.pl>0?Math.round((s.fl/s.pl)*100):0)+"%"); const pCpl=cplValue(s.ps,s.pl); const fCpl=cplValue(s.fs,s.fl); const elPerc=document.getElementById(`${m}_stat_perccpl`); if(elPerc){ if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; else { const pc=Math.round((fCpl/pCpl)*100); const col=pc<=100?'#30D158':'#FF453A'; elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; } } let totalDays=0, activeDays=0; monthsData[mI].weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ let act=false; chs.forEach((_,cI)=>{ const dId=`${m}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0||(inputState[`${dId}_leads`]||0)>0) act=true; }); if(act) activeDays++; }); } else { let act=false; chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); if(act) activeDays+=7; } }); const fc=activeDays>0?Math.round((s.fl/activeDays)*totalDays):0; txt(`${m}_stat_forecast`,fCount(fc)); }
   function recalcAll(){ monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> (m.channels||[]).forEach((c,cI)=>{ calcDaysToWeek(mI, wI, cI); calcRow(`m${mI}_w${wI}_c${cI}`); }))); monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> calcWeekTotal(`m${mI}`, `w${wI}`))); monthsData.forEach((m,mI)=> { calcGrand(`m${mI}`); (m.channels||[]).forEach((c,cI)=> calcChannelGrand(mI, cI)); }); }
