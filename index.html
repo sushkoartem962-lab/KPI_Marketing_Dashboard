@@ -1053,7 +1053,7 @@ function renderTraffic() {
             <div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div>
          </div>
 
-         <div class="stat-box"><div class="stat-label">Выручка (Факт)</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
+         <div class="stat-box"><div class="stat-label">Выручка</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
          
          <div class="stat-box"><div class="stat-label">ДРР (Общий)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
 
@@ -1080,11 +1080,11 @@ function renderTraffic() {
             <div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_drr">-</span></strong></div>
         </div></div>
         
-        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">₽ Финансы</button>
+        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">Финансы</button>
         </div>
         
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
+        <th>${isFin ? 'Выручка' : 'Лиды A+B'}</th>
         <th>${isFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
 
