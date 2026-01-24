@@ -645,6 +645,12 @@ function googleLogin() {
     db.ref('kpi_project/inputState/' + key).set(inputState[key]);
     renderTraffic(); // Перерисовываем трафик с новыми колонками
 }
+    function toggleTotalFinanceMode(mI) {
+    const key = `ui_fin_mode_total_m${mI}`;
+    inputState[key] = !inputState[key];
+    db.ref('kpi_project/inputState/' + key).set(inputState[key]);
+    renderTraffic();
+}
 function formatMoney(n) {
       // Если n это null, undefined или пустая строка — возвращаем пустоту (прочерк будет placeholder-ом)
       if (n === null || n === undefined || n === '') return "";
@@ -1034,6 +1040,7 @@ function findErrMetricName(metrics) {
 // --- TRAFFIC RENDER (UPDATED) ---
   // --- TRAFFIC RENDER (PATCHED WITH FINANCE & DRR) ---
 // --- TRAFFIC RENDER (FIXED HEADER: ALL 6 METRICS) ---
+// --- TRAFFIC RENDER (FULL UPDATE: CHANNELS + TOTAL FINANCE) ---
 function renderTraffic() {
     _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
       const chs = month.channels || [];
@@ -1044,29 +1051,16 @@ function renderTraffic() {
       
       <div class="stats-grid">
          <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
-         
          <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
-         
-         <div class="stat-box">
-            <div class="stat-label">CPL A+B (Факт/План)</div>
-            <div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div>
-            <div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div>
-         </div>
-
-         <div class="stat-box"><div class="stat-label">Выручка</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
-         
+         <div class="stat-box"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
+         <div class="stat-box"><div class="stat-label">Выручка (Факт)</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
          <div class="stat-box"><div class="stat-label">ДРР (Общий)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
-
-         <div class="stat-box forecast">
-            <div class="stat-label">Прогноз Лидов A+B</div>
-            <div class="stat-val" id="m${mIndex}_stat_forecast">-</div>
-            <div class="stat-sub">Конец месяца</div>
-         </div>
+         <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов A+B</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
       </div></div>
       
       <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
 
-      // Генерация карточек каналов
+      // Генерация карточек каналов (без изменений логики)
       chs.forEach((ch, cI) => {
         const isFin = !!inputState[`ui_fin_mode_m${mIndex}_c${cI}`];
         const finBtnClass = isFin ? 'finance-active' : '';
@@ -1075,16 +1069,13 @@ function renderTraffic() {
         <div class="mini-grid">
             <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
             <div class="mini-chip">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
-            
             <div class="mini-chip">Выручка: <strong style="color:#30D158"><span id="m${mIndex}_c${cI}_mini_rev">-</span></strong></div>
             <div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_drr">-</span></strong></div>
         </div></div>
-        
-        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">Финансы</button>
+        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">₽ Финансы</button>
         </div>
-        
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isFin ? 'Выручка' : 'Лиды A+B'}</th>
+        <th>${isFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
         <th>${isFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
 
@@ -1092,14 +1083,12 @@ function renderTraffic() {
           const rowId = `m${mIndex}_w${wI}`; 
           const collapsed = isWeekCollapsed(mIndex, cI, wI);
           const caret = collapsed ? '▸' : '▾';
-          
           const uniqueWeekId = `d_m${mIndex}_c${cI}_w${wI}`;
           const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
           const activeClass = isDaysExpanded ? 'active' : '';
 
           html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cI},${wI})">${caret}</button><div class="week-title-text" contenteditable onblur="updateWeekName(${mIndex},${wI},this.innerText)">${weekObj.title}</div>
           ${(weekObj.days||[]).length>0?`<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>`:''}</div></td><td class="col-type" style="border-bottom:1px solid var(--bd-color)"></td><td colspan="3" style="border-bottom:1px solid var(--bd-color)"></td></tr>
-          
           <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeCells(rowId,cI,'plan', isFin)}</tr>
           <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeCells(rowId,cI,'fact', isFin)}</tr>
           <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makePercCells(rowId,cI, isFin)}</tr>`;
@@ -1114,25 +1103,36 @@ function renderTraffic() {
                 col2 = `<td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_leads" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>`;
                 col3 = `<td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td>`;
             }
-
             html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
              <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>
              <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_spend" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
-             ${col2}
-             ${col3}</tr>`;
+             ${col2} ${col3}</tr>`;
           });
           html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="5"></td></tr>`;
         });
         html += `</tbody></table></div></div>`;
       });
       
-      html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
+      // === ОБНОВЛЕННЫЙ БЛОК TOTAL (ВСЕГО) ===
+      const isTotalFin = !!inputState[`ui_fin_mode_total_m${mIndex}`];
+      const totalFinBtnClass = isTotalFin ? 'finance-active' : '';
+
+      html += `<div class="channel-card total-card">
+        <div class="channel-header">
+            <div class="channel-name">ВСЕГО</div>
+            <button class="kpi-btn ${totalFinBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleTotalFinanceMode(${mIndex})">₽ Финансы</button>
+        </div>
+        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
+        <th>${isTotalFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
+        <th>${isTotalFin ? 'ДРР' : 'CPL A+B'}</th>
+        </tr></thead><tbody>`;
+        
       month.weeks.forEach((weekObj, wI) => {
         const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
         html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},-1,${wI})">${caret}</button><div class="week-title-text">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="3"></td></tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeTotalCells(rowId,'plan')}</tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeTotalCells(rowId,'fact')}</tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeTotalPercCells(rowId)}</tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeTotalCells(rowId,'plan', isTotalFin)}</tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeTotalCells(rowId,'fact', isTotalFin)}</tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeTotalPercCells(rowId, isTotalFin)}</tr>
         <tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td colspan="5"></td></tr>`;
       });
       html += `</tbody></table></div></div></div></div>`;
@@ -1633,8 +1633,17 @@ function makeCells(rowId,cI,type, isFin){
                 <td class="cpl-cell" id="${id}_${type}_cpl">-</td>`; 
     }
 }
-function makeTotalCells(rowId,type){ return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td><td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td><td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>`; }
-function makePercCells(rowId,cI, isFin){ 
+function makeTotalCells(rowId, type, isFin){ 
+    if(isFin) {
+        return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td>
+                <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_revenue">-</td>
+                <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_drr">-</td>`;
+    }
+    return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td>
+            <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td>
+            <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>`; 
+}
+    function makePercCells(rowId,cI, isFin){ 
     if (isFin) {
        // Для финансов пока нет плана выручки, поэтому процент выполнения плана не считаем. 
        // Можно выводить прочерк.
@@ -1644,13 +1653,62 @@ function makePercCells(rowId,cI, isFin){
     }
     return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>`; 
 }
-    function makeTotalPercCells(rowId){ return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td><td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>`; }
-  function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
+function makeTotalPercCells(rowId, isFin){ 
+    if(isFin) {
+        // Для Выручки и ДРР проценты (план/факт) пока не выводим (плана по выручке нет)
+        return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td>
+                <td><div class="badge badge-neutral">-</div></td>
+                <td><div class="badge badge-neutral">-</div></td>`;
+    }
+    return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td>
+            <td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>`; 
+}
+    function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
   function txt(id, v){ const el=document.getElementById(id); if(el) el.innerText=v; }
   function badge(id, plan, fact, invert=false){ const el=document.getElementById(id); if(!el) return; plan=+plan||0; fact=+fact||0; if(plan<=0){ el.className='badge badge-neutral'; el.innerText='-'; return; } const p=Math.round((fact/plan)*100); let cls='badge-neutral'; if(invert){ if(p<=100) cls='badge-good'; else cls='badge-bad'; } else { if(p>=100) cls='badge-good'; else cls='badge-bad'; } el.className=`badge ${cls}`; el.innerText=p+'%'; }
   function calcRow(id){ const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); badge(`${id}_perc_spend`,ps,fs,true); badge(`${id}_perc_leads`,pl,fl); badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true); }
-  function calcWeekTotal(m,w){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); (monthsData[mI].channels||[]).forEach((_,i)=>{ const id=`${m}_${w}_c${i}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); txt(`${m}_${w}_total_plan_spend`,fRub(s.ps)); txt(`${m}_${w}_total_plan_leads`,fCount(s.pl)); txt(`${m}_${w}_total_fact_spend`,fRub(s.fs)); txt(`${m}_${w}_total_fact_leads`,fCount(s.fl)); txt(`${m}_${w}_total_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_${w}_total_fact_cpl`,fRub(cplValue(s.fs,s.fl))); badge(`${m}_${w}_total_perc_spend`,s.ps,s.fs,true); badge(`${m}_${w}_total_perc_leads`,s.pl,s.fl); badge(`${m}_${w}_total_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true); }
-function calcChannelGrand(mI,cI){ 
+function calcWeekTotal(m,w){ 
+    let s={ps:0,pl:0,fs:0,fl:0, fRev:0}; 
+    const mI=parseInt(m.replace('m','')); 
+    
+    // Суммируем данные по всем каналам
+    (monthsData[mI].channels||[]).forEach((_,i)=>{ 
+        const id=`${m}_${w}_c${i}`; 
+        s.ps+=inputState[`${id}_plan_spend`]||0; 
+        s.pl+=inputState[`${id}_plan_leads`]||0; 
+        s.fs+=inputState[`${id}_fact_spend`]||0; 
+        s.fl+=inputState[`${id}_fact_leads`]||0; 
+        s.fRev+=inputState[`${id}_fact_revenue`]||0; // Суммируем Выручку
+    }); 
+    
+    // Вывод стандартных полей
+    txt(`${m}_${w}_total_plan_spend`,fRub(s.ps)); 
+    txt(`${m}_${w}_total_plan_leads`,fCount(s.pl)); 
+    txt(`${m}_${w}_total_fact_spend`,fRub(s.fs)); 
+    txt(`${m}_${w}_total_fact_leads`,fCount(s.fl)); 
+    txt(`${m}_${w}_total_plan_cpl`,fRub(cplValue(s.ps,s.pl))); 
+    txt(`${m}_${w}_total_fact_cpl`,fRub(cplValue(s.fs,s.fl))); 
+    
+    badge(`${m}_${w}_total_perc_spend`,s.ps,s.fs,true); 
+    badge(`${m}_${w}_total_perc_leads`,s.pl,s.fl); 
+    badge(`${m}_${w}_total_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true); 
+    
+    // === НОВЫЕ ПОЛЯ ДЛЯ TOTAL (Выручка и ДРР) ===
+    txt(`${m}_${w}_total_fact_revenue`, fRub(s.fRev));
+    
+    // Расчет общего ДРР
+    const elDrr = document.getElementById(`${m}_${w}_total_fact_drr`);
+    if(elDrr) {
+        if(s.fRev > 0) {
+             const drr = (s.fs / s.fRev) * 100;
+             elDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NF.format(drr)}%</span>`;
+        } else {
+             elDrr.innerText = '-';
+        }
+    }
+}
+    function calcChannelGrand(mI,cI){ 
       let ps=0,pl=0,fs=0,fl=0, fRev=0; 
       const weeks=monthsData[mI].weeks; 
       
