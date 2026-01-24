@@ -1033,25 +1033,41 @@ function findErrMetricName(metrics) {
 
 // --- TRAFFIC RENDER (UPDATED) ---
   // --- TRAFFIC RENDER (PATCHED WITH FINANCE & DRR) ---
+// --- TRAFFIC RENDER (FIXED HEADER: ALL 6 METRICS) ---
 function renderTraffic() {
     _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
       const chs = month.channels || [];
       
-      // 1. Шапка месяца: Добавляем Выручку и ДРР
+      // 1. Шапка месяца
       let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
       <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="addTrafficChannel(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
+      
       <div class="stats-grid">
          <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
+         
          <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
          
+         <div class="stat-box">
+            <div class="stat-label">CPL A+B (Факт/План)</div>
+            <div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div>
+            <div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div>
+         </div>
+
          <div class="stat-box"><div class="stat-label">Выручка (Факт)</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
+         
          <div class="stat-box"><div class="stat-label">ДРР (Общий)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
+
+         <div class="stat-box forecast">
+            <div class="stat-label">Прогноз Лидов A+B</div>
+            <div class="stat-val" id="m${mIndex}_stat_forecast">-</div>
+            <div class="stat-sub">Конец месяца</div>
+         </div>
       </div></div>
+      
       <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
 
       // Генерация карточек каналов
       chs.forEach((ch, cI) => {
-        // Проверяем, включен ли режим финансов для этого канала
         const isFin = !!inputState[`ui_fin_mode_m${mIndex}_c${cI}`];
         const finBtnClass = isFin ? 'finance-active' : '';
 
@@ -1068,7 +1084,6 @@ function renderTraffic() {
         </div>
         
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        
         <th>${isFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
         <th>${isFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
@@ -1091,15 +1106,11 @@ function renderTraffic() {
           
           (weekObj.days||[]).forEach((day, dI) => {
             const dayId = `${rowId}_d${dI}_c${cI}`;
-            
-            // ЛОГИКА ДНЕВНЫХ ЯЧЕЕК
             let col2, col3;
             if (isFin) {
-                // Режим финансов: Ввод Выручки, Расчет ДРР
                 col2 = `<td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_revenue" data-id="${dayId}_revenue" data-kind="money" value="${formatMoney(inputState[`${dayId}_revenue`])}" placeholder="-"></td>`;
                 col3 = `<td class="cpl-cell" id="${dayId}_drr" style="font-size:11px;">-</td>`;
             } else {
-                // Обычный режим: Ввод Лидов, Расчет CPL
                 col2 = `<td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_leads" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>`;
                 col3 = `<td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td>`;
             }
@@ -1115,8 +1126,6 @@ function renderTraffic() {
         html += `</tbody></table></div></div>`;
       });
       
-      // Блок TOTAL оставляем без изменений для краткости, либо можно туда тоже добавить логику, если нужно.
-      // Пока оставим стандартный вывод для Всего.
       html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th><th>Лиды A+B</th><th>CPL A+B</th></tr></thead><tbody>`;
       month.weeks.forEach((weekObj, wI) => {
         const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
