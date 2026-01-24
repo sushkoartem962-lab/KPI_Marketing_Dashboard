@@ -672,7 +672,14 @@ function formatCount(n) {
       
       return NF.format(n);
   }
-  function formatPercent(n){ n=parsePercentLike(n); if(!Number.isFinite(n)) return ""; return (Number.isInteger(n)?NFP.format(n):NFP.format(n)) + "%"; }
+  function formatPercent(val) {
+    if (val == null || val === '') return ""; // Возвращаем пустоту, а не 0
+    // Если передали строку с запятой, меняем на точку
+    const s = String(val).replace(',', '.').replace(/[^\d.\-]/g, '');
+    const n = parseFloat(s);
+    if (!Number.isFinite(n)) return "";
+    return (Number.isInteger(n) ? NFP.format(n) : NFP.format(n)) + "%";
+}
   function isPercentMetric(name){ const s=(name||"").toString().trim(); return s==="ERR" || s.includes("%") || s.toLowerCase().includes("err"); }
 function formatCount(n) {
       if (n === null || n === undefined || n === '') return "";
@@ -1909,79 +1916,91 @@ function calcSMMDaysToWeek(mI, cI, wI) {
     const ch = month.smmChannels[cI];
     if(!ch) return;
 
-    // 1. Сначала пробуем рассчитать "Взвешенный ERR" на основе дней
+    // 1. Сначала пробуем рассчитать "Взвешенный ERR"
     const reachMet = findReachMetricName(ch.metrics);
     const errMet = findErrMetricName(ch.metrics);
-    let weightedErrFact = null; // Пока null, если рассчитать нельзя
+    let weightedErrFact = null; 
 
     if (reachMet && errMet) {
         let totalReactions = 0;
         let totalReach = 0;
+        let hasData = false; // Флаг: были ли вообще данные
         
         days.forEach((d, dI) => {
             const rKey = getSMMDayKey(mI, cI, wI, dI, reachMet);
             const eKey = getSMMDayKey(mI, cI, wI, dI, errMet);
             
-            // Берем сырые значения (числа) из inputState
-            // Важно: parseFloat, так как там могут быть строки
             const rVal = inputState[rKey]; 
             const eVal = inputState[eKey];
 
-            const r = (rVal !== undefined && rVal !== "") ? (+rVal) : 0;
-            const e = (eVal !== undefined && eVal !== "") ? (+eVal) : 0;
-
-            if (r > 0) {
-                totalReactions += r * (e / 100); // Восстанавливаем реакции за день
-                totalReach += r;
+            if (rVal !== undefined && rVal !== null && rVal !== '') {
+                const r = +rVal;
+                const e = (eVal !== undefined && eVal !== "") ? (+eVal) : 0;
+                
+                if (r > 0) {
+                    totalReactions += r * (e / 100);
+                    totalReach += r;
+                    hasData = true;
+                }
             }
         });
 
-        if (totalReach > 0) {
+        if (hasData && totalReach > 0) {
             weightedErrFact = (totalReactions / totalReach) * 100;
         }
     }
 
-    // 2. Проходим по всем метрикам и обновляем строку "ФАКТ" недели
+    // 2. Проходим по всем метрикам
     ch.metrics.forEach(metricName => {
         const isPct = isPercentMetric(metricName);
         const isErr = metricName.toLowerCase().includes('err');
         
         let sum = 0;
         let cnt = 0;
+        let finalVal = null; // По умолчанию NULL (пусто)
 
         // ЛОГИКА ВЫБОРА:
-        // Если это ERR и у нас есть успешно рассчитанный взвешенный факт -> берем его.
         if (isErr && weightedErrFact !== null) {
-            sum = weightedErrFact;
+            finalVal = weightedErrFact;
         } else {
-            // ИНАЧЕ -> Старая логика (сумма или простое среднее)
+            // Обычный расчет (сумма или среднее)
             days.forEach((d, dI) => {
                 const key = getSMMDayKey(mI, cI, wI, dI, metricName);
                 const val = inputState[key];
+                // Учитываем значение, только если оно реально введено
                 if (val !== undefined && val !== null && val !== '') {
                     sum += (+val || 0);
                     cnt += 1;
                 }
             });
             
-            // Если это процент (но не ERR, который мы обработали выше), считаем среднее арифметическое
-            // Например "% Дочитываний" - его пока считаем как среднее, если нет метрики "Открытия"
-            if (isPct && cnt > 0) {
-                sum = sum / cnt;
+            if (cnt > 0) {
+                if (isPct && !isErr) {
+                    finalVal = sum / cnt; // Среднее для процентов
+                } else {
+                    finalVal = sum; // Сумма для остальных
+                }
             }
         }
 
-        // Записываем результат в стейт (ФАКТ недели)
+        // Записываем результат в стейт
         const factKey = getSMMKey(mI, cI, wI, metricName, 'fact');
-        inputState[factKey] = sum;
+        
+        if (finalVal === null) {
+            // Если данных не было, удаляем из стейта (чтобы было пусто)
+            delete inputState[factKey];
+        } else {
+            inputState[factKey] = finalVal;
+        }
 
         // Обновляем инпут в таблице визуально
         const el = document.querySelector(`input[data-id="${factKey}"]`);
-        if (el) {
-            // Не обновляем, если пользователь прямо сейчас редактирует саму ячейку недели (редкий кейс)
-            if (document.activeElement !== el) {
-                el.value = isPct ? formatPercent(sum) : formatCount(sum);
-            }
+        if (el && document.activeElement !== el) {
+             if (finalVal === null) {
+                 el.value = "";
+             } else {
+                 el.value = isPct ? formatPercent(finalVal) : formatCount(finalVal);
+             }
         }
     });
 }
