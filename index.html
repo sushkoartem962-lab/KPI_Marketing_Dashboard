@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KPI Dashboard v9.4 (Stable + Finance)</title>
+<title>KPI Dashboard v9.3 (Finance Edition)</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -160,19 +160,12 @@
     .day-cpl-bad { color:#FF453A; font-weight:700; }
     .day-cpl-good { color:#30D158; font-weight:700; }
     .day-cpl-neutral { opacity:0.5; }
-    
     .cpl-cell { opacity:.78; font-weight:900; }
-    
-    /* DRR Colors */
-    .drr-good { color: #30D158; font-weight:800; }
-    .drr-mid { color: #FFD60A; font-weight:800; }
-    .drr-bad { color: #FF453A; font-weight:800; }
 
     .badge { display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; min-width:40px; }
     .badge-neutral { color:var(--tx-sec); background:var(--badge-bg); }
     .badge-good { color:#30D158; background:rgba(48,209,88,.1); }
     .badge-bad { color:#FF453A; background:rgba(255,69,58,.1); }
-    .badge-warning { color: #FFD60A; background: rgba(255,214,10,0.15); }
 
     .total-card { background:var(--total-bg); border-color:rgba(255,255,255,.06); }
     .total-card .channel-table-wrap { background:var(--total-bg); }
@@ -283,44 +276,65 @@
       .col-type        { width: 60px !important; min-width: 60px !important; }
     }
     /* Кнопка входа Google */
-.google-login-btn {
-    background: #4285F4;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 600;
-    font-family: 'Roboto', sans-serif; /* Шрифт Google, если есть, или дефолтный */
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
-    transition: all 0.2s ease;
-    text-transform: none;
-}
+    .google-login-btn {
+        background: #4285F4;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        font-family: 'Roboto', sans-serif;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+        transition: all 0.2s ease;
+        text-transform: none;
+    }
 
-.google-login-btn:hover {
-    background: #3367D6;
-    box-shadow: 0 10px 15px rgba(66, 133, 244, 0.3);
-    transform: translateY(-2px);
-}
+    .google-login-btn:hover {
+        background: #3367D6;
+        box-shadow: 0 10px 15px rgba(66, 133, 244, 0.3);
+        transform: translateY(-2px);
+    }
 
-.google-login-btn:active {
-    transform: translateY(0);
-}
+    .google-login-btn:active {
+        transform: translateY(0);
+    }
 
-/* Белый контейнер для логотипа G */
-.g-icon-wrapper {
-    background: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    .g-icon-wrapper {
+        background: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* === FINANCE PATCH CSS === */
+    /* Скрываем финансовые колонки по умолчанию */
+    .col-rev, .col-drr { display: none; }
+
+    /* Когда включен режим финансов: скрываем лиды, показываем деньги */
+    .traffic-month-body.mode-finance .col-leads,
+    .traffic-month-body.mode-finance .col-cpl,
+    .traffic-month-body.mode-finance .stat-box.leads-box,
+    .traffic-month-body.mode-finance .stat-box.cpl-box { display: none !important; }
+
+    .traffic-month-body.mode-finance .col-rev,
+    .traffic-month-body.mode-finance .col-drr { display: table-cell; animation: fadeIn 0.3s; }
+
+    /* Цвета ДРР */
+    .drr-good { color: #30D158; font-weight: 800; }     /* <= 25% */
+    .drr-warn { color: #FFD60A; font-weight: 800; }     /* 26-35% */
+    .drr-bad  { color: #FF453A; font-weight: 800; }     /* > 35% */
+    .drr-neutral { opacity: 0.5; }
+
+    /* Кнопка финансов активная */
+    .kpi-btn.btn-fin.active { background: var(--tx-accent); color: white; border-color: var(--tx-accent); }
 </style>
 </head>
 <body class="theme-dark">
@@ -408,115 +422,90 @@
     </div>
 
     <div id="overview" class="kpi-content">
-        <div class="bento-card">
-            <div class="month-header">
-               <div class="month-title">Сводка: <span id="ov_current_month_name" style="color:var(--tx-accent); margin-left:8px;">Нет данных</span></div>
-            </div>
-            
-            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                <div class="stat-box">
-                    <div class="stat-label">Трафик: Расход</div>
-                    <div class="stat-val" id="ov_curr_spend">-</div>
-                    <div class="stat-sub" id="ov_curr_spend_plan">План: -</div>
-                    <div class="stat-sub" id="ov_curr_spend_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Трафик: Лиды A+B</div>
-                    <div class="stat-val accent-text" id="ov_curr_leads">-</div>
-                      <div class="stat-sub" id="ov_curr_leads_plan">План: -</div>
-                      <div class="stat-sub" id="ov_curr_leads_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Трафик: CPL A+B</div>
-                    <div class="stat-val" id="ov_curr_cpl">-</div>
-                    <div class="stat-sub" id="ov_curr_cpl_perc">-</div>
-                </div>
-                
-                <div class="stat-box">
-                    <div class="stat-label">Трафик: Выручка</div>
-                    <div class="stat-val accent-text" id="ov_curr_rev">-</div>
-                    <div class="stat-sub" id="ov_curr_rev_plan">План: -</div>
-                    <div class="stat-sub" id="ov_curr_rev_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Трафик: ДРР</div>
-                    <div class="stat-val" id="ov_curr_drr">-</div>
-                    <div class="stat-sub" id="ov_curr_drr_perc">-</div>
-                </div>
-
-                <div class="stat-box">
-                    <div class="stat-label">SMM: Лиды</div>
-                    <div class="stat-val accent-text" id="ov_curr_smm_leads">-</div>
-                    <div class="stat-sub" id="ov_curr_smm_leads_plan">План: -</div>
-                    <div class="stat-sub" id="ov_curr_smm_leads_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-                 <div class="stat-box">
-                    <div class="stat-label">SMM: Чистый приток</div>
-                    <div class="stat-val" id="ov_curr_smm_subs">-</div>
-                    <div class="stat-sub" id="ov_curr_smm_subs_plan">План: -</div>
-                    <div class="stat-sub" id="ov_curr_smm_subs_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-                 <div class="stat-box">
-                    <div class="stat-label">SMM: Охват</div>
-                    <div class="stat-val" id="ov_curr_smm_reach">-</div>
-                    <div class="stat-sub" id="ov_curr_smm_reach_plan">План: -</div>
-                    <div class="stat-sub" id="ov_curr_smm_reach_perc" style="margin-top:6px; font-size:12px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="chart-grid-layout">
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Расход (₽)</div>
-                <div class="chart-container">
-                    <canvas id="chartTrafficSpend"></canvas>
-                </div>
-            </div>
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Лиды A+B (шт)</div>
-                <div class="chart-container">
-                    <canvas id="chartTrafficLeads"></canvas>
-                </div>
-            </div>
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: CPL A+B (₽)</div>
-                <div class="chart-container">
-                    <canvas id="chartCPL"></canvas>
-                </div>
-            </div>
-            
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Выручка (Факт)</div>
-                <div class="chart-container">
-                    <canvas id="chartTrafficRev"></canvas>
-                </div>
-            </div>
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: ДРР (Факт %)</div>
-                <div class="chart-container">
-                    <canvas id="chartDRR"></canvas>
-                </div>
-            </div>
-            
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Лиды (шт)</div>
-                <div class="chart-container">
-                    <canvas id="chartSMMLeads"></canvas>
-                </div>
-            </div>
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Чистый приток (чел)</div>
-                <div class="chart-container">
-                    <canvas id="chartSMMSubs"></canvas>
-                </div>
-            </div>
-            <div class="bento-card">
-                <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Охват</div>
-                <div class="chart-container">
-                    <canvas id="chartSMMReach"></canvas>
-                </div>
-            </div>
-        </div>
+      <div class="bento-card">
+          <div class="month-header">
+             <div class="month-title">Сводка: <span id="ov_current_month_name" style="color:var(--tx-accent); margin-left:8px;">Нет данных</span></div>
+          </div>
+          
+          <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+             <div class="stat-box">
+                 <div class="stat-label">Трафик: Расход</div>
+                 <div class="stat-val" id="ov_curr_spend">-</div>
+                 <div class="stat-sub" id="ov_curr_spend_plan">План: -</div>
+                 <div class="stat-sub" id="ov_curr_spend_perc" style="margin-top:6px; font-size:12px;"></div>
+             </div>
+             <div class="stat-box">
+                 <div class="stat-label">Выручка (Факт)</div>
+                 <div class="stat-val accent-text" id="ov_curr_rev">-</div>
+                 <div class="stat-sub" style="opacity:0.5; margin-top:5px;">Плана нет</div>
+             </div>
+             <div class="stat-box">
+                 <div class="stat-label">ДРР (Факт)</div>
+                 <div class="stat-val" id="ov_curr_drr">-</div>
+                 <div class="stat-sub" style="font-size:10px; margin-top:5px;">< 25% <span style="color:#30D158">●</span> > 35% <span style="color:#FF453A">●</span></div>
+             </div>
+             <div class="stat-box">
+                 <div class="stat-label">Трафик: Лиды A+B</div>
+                 <div class="stat-val" id="ov_curr_leads">-</div>
+                   <div class="stat-sub" id="ov_curr_leads_plan">План: -</div>
+                   <div class="stat-sub" id="ov_curr_leads_perc" style="margin-top:6px; font-size:12px;"></div>
+             </div>
+             <div class="stat-box">
+                 <div class="stat-label">Трафик: CPL A+B</div>
+                 <div class="stat-val" id="ov_curr_cpl">-</div>
+                 <div class="stat-sub" id="ov_curr_cpl_perc">-</div>
+             </div>
+          </div>
+      </div>
+    
+      <div class="chart-grid-layout">
+          <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Выручка (₽)</div>
+             <div class="chart-container">
+                 <canvas id="chartRevenue"></canvas>
+             </div>
+          </div>
+          <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">ДРР (%)</div>
+             <div class="chart-container">
+                 <canvas id="chartDRR"></canvas>
+             </div>
+          </div>
+          
+          <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Расход (₽)</div>
+             <div class="chart-container"><canvas id="chartTrafficSpend"></canvas></div>
+          </div>
+          <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: Лиды A+B (шт)</div>
+             <div class="chart-container"><canvas id="chartTrafficLeads"></canvas></div>
+          </div>
+          <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">Трафик: CPL A+B (₽)</div>
+             <div class="chart-container">
+                 <canvas id="chartCPL"></canvas>
+             </div>
+         </div>
+         
+         <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Лиды (шт)</div>
+             <div class="chart-container">
+                 <canvas id="chartSMMLeads"></canvas>
+             </div>
+         </div>
+         <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Чистый приток (чел)</div>
+             <div class="chart-container">
+                 <canvas id="chartSMMSubs"></canvas>
+             </div>
+         </div>
+         <div class="bento-card">
+             <div class="stat-label" style="margin-bottom:15px; font-size:14px;">SMM: Охват</div>
+             <div class="chart-container">
+                 <canvas id="chartSMMReach"></canvas>
+             </div>
+         </div>
+      </div>
     </div>
 
   </div>
@@ -570,7 +559,7 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.app().database("https://kpi-marketing-dashboard-default-rtdb.europe-west1.firebasedatabase.app");
-  const auth = firebase.auth(); 
+  const auth = firebase.auth();
 
   const AVAILABLE_METRICS = [
       "Охват", "Посещения профиля", "Чистый приток подписчиков",
@@ -592,6 +581,8 @@
   let activeAddMetricMonth = -1;
   let activeAddMetricChannel = -1;
   let chartInstances = {};
+  
+  let financeModes = {}; // NEW: Stores finance toggle state
 
   const NF = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
   const NFP = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
@@ -624,6 +615,7 @@ function googleLogin() {
               if(btnText) btnText.innerText = "Войти через Google";
               if (error.code === 'auth/popup-closed-by-user') return;
               if (error.code === 'auth/cancelled-popup-request') return;
+
               if(errEl) {
                   errEl.style.display = 'block';
                   errEl.innerText = "Ошибка: " + error.message;
@@ -660,11 +652,34 @@ function googleLogin() {
   }
   function formatPercent(n){ n=parsePercentLike(n); if(!Number.isFinite(n)) return ""; return (Number.isInteger(n)?NFP.format(n):NFP.format(n)) + "%"; }
   function isPercentMetric(name){ const s=(name||"").toString().trim(); return s==="ERR" || s.includes("%") || s.toLowerCase().includes("err"); }
+  
   function fRub(n){ n = +n || 0; return n===0 ? "-" : (NF.format(n) + " ₽"); }
   function fCount(n){ n = +n || 0; return n===0 ? "-" : NF.format(n); }
   
-  function drrValue(spend, rev) { spend = +spend || 0; rev = +rev || 0; if (rev === 0) return 0; return (spend / rev) * 100; }
-  function formatDrr(n) { if(!n || n === 0) return "-"; return NFP.format(n) + "%"; }
+  // === FINANCE HELPERS ===
+  function getDrrClass(val) {
+    if (!val && val !== 0) return 'drr-neutral';
+    if (val <= 25) return 'drr-good';
+    if (val <= 35) return 'drr-warn';
+    return 'drr-bad';
+  }
+
+  function calcDrrVal(spend, revenue) {
+    spend = +spend || 0;
+    revenue = +revenue || 0;
+    if (revenue === 0) return 0;
+    return (spend / revenue) * 100;
+  }
+
+  function formatDrr(n) {
+    if (!n && n !== 0) return "-";
+    return NFP.format(n) + "%";
+  }
+
+  function toggleFinanceMode(mIndex) {
+    financeModes[mIndex] = !financeModes[mIndex];
+    renderTraffic(); 
+  }
 
   function toggleTheme(){
     isDark = !isDark;
@@ -689,8 +704,7 @@ function googleLogin() {
     btn.classList.add('active');
     if(t === 'overview') renderOverview();
   }
-
-  function applyResponsiveTableWidths() {
+    function applyResponsiveTableWidths() {
     if (window.innerWidth > 768) return;
     document.querySelectorAll('.channel-table').forEach(table => {
       const ths = table.querySelectorAll('thead th');
@@ -745,15 +759,18 @@ function googleLogin() {
   function slugify(text) {
     return btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
   }
+
   function findReachMetricName(metrics) {
-    return metrics.find(m => {
-        const l = m.toLowerCase();
-        return l.includes('охват') || l.includes('показы') || l.includes('просмотры');
-    });
-}
-function findErrMetricName(metrics) {
-    return metrics.find(m => m.toLowerCase().includes('err'));
-}
+      return metrics.find(m => {
+          const l = m.toLowerCase();
+          return l.includes('охват') || l.includes('показы') || l.includes('просмотры');
+      });
+  }
+
+  function findErrMetricName(metrics) {
+      return metrics.find(m => m.toLowerCase().includes('err'));
+  }
+
   // ==========================================
   // 4. COMMON LOGIC
   // ==========================================
@@ -939,22 +956,22 @@ function findErrMetricName(metrics) {
   // 6. RENDER LOGIC
   // ==========================================
   function onCellFocus(el){ const kind = el.dataset.kind || 'count'; if(kind==='percent') el.value=String(parsePercentLike(el.value)||""); else el.value=String(parseNumberLike(el.value)||""); setTimeout(()=>{try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){}},0); }
+
   function onCellBlur(el) {
       const rawValue = el.value.trim();
       const id = el.dataset.id;
       const kind = el.dataset.kind || 'count';
 
       if (rawValue === '') {
-          el.value = ''; 
+          el.value = '';
           inputState[id] = null;
           db.ref('kpi_project/inputState/' + id).remove(); 
           if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
           return;
       }
-
       let n;
-      if (kind === 'percent') n = parsePercentLike(rawValue);
-      else n = parseNumberLike(rawValue);
+      if (kind === 'percent') { n = parsePercentLike(rawValue); } 
+      else { n = parseNumberLike(rawValue); }
 
       inputState[id] = n;
       db.ref('kpi_project/inputState/' + id).set(n);
@@ -972,10 +989,8 @@ function findErrMetricName(metrics) {
             const id = el.dataset.id;
             const kind = el.dataset.kind || 'count'; 
             const val = (kind === 'percent') ? parsePercentLike(el.value) : parseNumberLike(el.value);
-            
             inputState[id] = val; 
             db.ref('kpi_project/inputState/' + id).set(val); 
-            
             if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
         }
     };
@@ -990,405 +1005,248 @@ function findErrMetricName(metrics) {
     document.getElementById('smmContainer').addEventListener('focusout', handleBlur);
   }
 
-// --- TRAFFIC RENDER (FIXED & STABLE) ---
+  // --- TRAFFIC RENDER (PATCHED FINANCE) ---
   function renderTraffic() {
-    _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
-      const chs = month.channels || [];
-      // Шапка месяца
-      let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
-      <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="addTrafficChannel(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
-      <div class="stats-grid">
-         <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
-         <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
-         <div class="stat-box"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
-         <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов A+B</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
-      </div></div>
-      <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
-
-      // Генерация карточек каналов
-      chs.forEach((ch, cI) => {
+      _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
+        const isFin = !!financeModes[mIndex];
+        const chs = month.channels || [];
         
-        html += `<div class="channel-card"><div class="channel-header"><div><div class="channel-name">${ch} <span class="delete-ch-btn" onclick="deleteTrafficChannel(${mIndex},${cI})">×</span></div>
-        <div class="mini-grid">
-            <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
-            <div class="mini-chip">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
-            <div class="mini-chip">CPL: <strong><span id="m${mIndex}_c${cI}_mini_fcpl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pcpl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_cpl"></span></div>
-            <div class="mini-chip">Rev: <strong><span id="m${mIndex}_c${cI}_mini_frev">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_prev">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_rev"></span></div>
-            <div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_fdrr">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pdrr">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_drr"></span></div>
-        </div></div>
+        let html = `<div class="card-top">
+          <div class="month-header">
+            <div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
+            <div style="display:flex;gap:10px;">
+               <button class="kpi-btn btn-fin ${isFin?'active':''}" onclick="toggleFinanceMode(${mIndex})">₽ Финансы</button>
+               <button class="kpi-btn" onclick="addTrafficChannel(${mIndex})">+ Канал</button>
+               <button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+             <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
+             
+             <div class="stat-box leads-box" style="${isFin?'display:none':''}"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
+             <div class="stat-box cpl-box" style="${isFin?'display:none':''}"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
+             
+             <div class="stat-box rev-box" style="${!isFin?'display:none':''}"><div class="stat-label">Выручка (Факт)</div><div class="stat-val accent-text" id="m${mIndex}_stat_rev">-</div></div>
+             <div class="stat-box drr-box" style="${!isFin?'display:none':''}"><div class="stat-label">ДРР (Факт)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div><div class="stat-sub" style="font-size:10px; opacity:0.5">< 25% | 25-35% | > 35%</div></div>
+
+             <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
+          </div>
         </div>
-        <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th class="col-leads">Лиды A+B</th><th class="col-cpl">CPL A+B</th>
-        <th class="col-rev">Выручка</th><th class="col-drr">ДРР</th>
-        </tr></thead><tbody>`;
+        
+        <div class="traffic-month-body ${isFin?'mode-finance':''}" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
+
+        chs.forEach((ch, cI) => {
+          html += `<div class="channel-card"><div class="channel-header"><div><div class="channel-name">${ch} <span class="delete-ch-btn" onclick="deleteTrafficChannel(${mIndex},${cI})">×</span></div>
+          <div class="mini-grid">
+              <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
+              <div class="mini-chip" style="${isFin?'display:none':''}">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
+              <div class="mini-chip" style="${isFin?'display:none':''}">CPL: <strong><span id="m${mIndex}_c${cI}_mini_fcpl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pcpl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_cpl"></span></div>
+              <div class="mini-chip" style="${!isFin?'display:none':''}">Выр: <strong><span id="m${mIndex}_c${cI}_mini_rev">-</span></strong></div>
+              <div class="mini-chip" style="${!isFin?'display:none':''}">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_drr">-</span></strong></div>
+          </div></div></div>
+          <div class="channel-table-wrap"><table class="channel-table"><thead><tr>
+             <th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
+             <th class="col-leads">Лиды A+B</th><th class="col-cpl">CPL A+B</th>
+             <th class="col-rev">Выручка</th><th class="col-drr">ДРР</th>
+          </tr></thead><tbody>`;
+
           month.weeks.forEach((weekObj, wI) => {
-          const rowId = `m${mIndex}_w${wI}`; 
-          const collapsed = isWeekCollapsed(mIndex, cI, wI);
-          const caret = collapsed ? '▸' : '▾';
-          
-          const uniqueWeekId = `d_m${mIndex}_c${cI}_w${wI}`;
-          const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
-          const activeClass = isDaysExpanded ? 'active' : '';
+            const rowId = `m${mIndex}_w${wI}`; 
+            const collapsed = isWeekCollapsed(mIndex, cI, wI);
+            const caret = collapsed ? '▸' : '▾';
+            const uniqueWeekId = `d_m${mIndex}_c${cI}_w${wI}`;
+            const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
+            const activeClass = isDaysExpanded ? 'active' : '';
 
-          // ЗАГОЛОВОК НЕДЕЛИ (Colspan=5 для корректного выравнивания с 7 колонками)
-          html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cI},${wI})">${caret}</button><div class="week-title-text" contenteditable onblur="updateWeekName(${mIndex},${wI},this.innerText)">${weekObj.title}</div>
-          ${(weekObj.days||[]).length>0?`<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>`:''}</div></td><td class="col-type" style="border-bottom:1px solid var(--bd-color)"></td><td colspan="5" style="border-bottom:1px solid var(--bd-color)"></td></tr>
-          
-          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeCells(rowId,cI,'plan')}</tr>
-          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeCells(rowId,cI,'fact')}</tr>
-          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makePercCells(rowId,cI)}</tr>`;
-          
-          // ДНИ (Добавлено поле ввода Выручки)
-          (weekObj.days||[]).forEach((day, dI) => {
-            const dayId = `${rowId}_d${dI}_c${cI}`;
-            html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
-             <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>
-             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
-             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>
-             <td class="cpl-cell" id="${dayId}_cpl" style="font-size:11px;">-</td>
-             <td><input type="text" inputmode="numeric" class="cell-input" data-id="${dayId}_revenue" data-kind="money" value="${formatMoney(inputState[`${dayId}_revenue`])}" placeholder="-"></td>
-             <td class="cpl-cell" style="opacity:0.3">-</td>
-             </tr>`;
+            html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cI},${wI})">${caret}</button><div class="week-title-text" contenteditable onblur="updateWeekName(${mIndex},${wI},this.innerText)">${weekObj.title}</div>
+            ${(weekObj.days||[]).length>0?`<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>`:''}</div></td><td class="col-type" style="border-bottom:1px solid var(--bd-color)"></td><td colspan="5" style="border-bottom:1px solid var(--bd-color)"></td></tr>
+            
+            <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeCells(rowId,cI,'plan')}</tr>
+            <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeCells(rowId,cI,'fact')}</tr>
+            <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makePercCells(rowId,cI)}</tr>`;
+            
+            (weekObj.days||[]).forEach((day, dI) => {
+               const dayId = `${rowId}_d${dI}_c${cI}`;
+               html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
+                <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>
+                <td><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_spend" data-id="${dayId}_spend" data-kind="money" value="${formatMoney(inputState[`${dayId}_spend`])}" placeholder="-"></td>
+                <td class="col-leads"><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_leads" data-id="${dayId}_leads" data-kind="count" value="${formatCount(inputState[`${dayId}_leads`])}" placeholder="-"></td>
+                <td class="cpl-cell col-cpl" id="${dayId}_cpl" style="font-size:11px;">-</td>
+                <td class="col-rev"><input type="text" inputmode="numeric" class="cell-input" id="${dayId}_rev" data-id="${dayId}_revenue" data-kind="money" value="${formatMoney(inputState[`${dayId}_revenue`])}" placeholder="-"></td>
+                <td class="cpl-cell col-drr" id="${dayId}_drr" style="font-size:11px;">-</td>
+               </tr>`;
+            });
+            html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="7"></td></tr>`;
           });
-          html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c${cI}_w${wI}"><td colspan="7"></td></tr>`;
+          html += `</tbody></table></div></div>`;
         });
-        html += `</tbody></table></div></div>`;
-      });
 
-      // TOTAL CARD (ВСЕГО)
-      html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО (Сводка)</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-      <th>Лиды A+B</th><th>CPL A+B</th><th>Выручка</th><th>ДРР</th>
-      </tr></thead><tbody>`;
-      
-      month.weeks.forEach((weekObj, wI) => {
-        const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
-        html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},-1,${wI})">${caret}</button><div class="week-title-text">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="5"></td></tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeTotalCells(rowId,'plan')}</tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeTotalCells(rowId,'fact')}</tr>
-        <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeTotalPercCells(rowId)}</tr>
-        <tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td colspan="7"></td></tr>`;
+        html += `<div class="channel-card total-card"><div class="channel-header"><div class="channel-name">ВСЕГО</div></div><div class="channel-table-wrap"><table class="channel-table"><thead><tr>
+          <th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
+          <th class="col-leads">Лиды A+B</th><th class="col-cpl">CPL A+B</th>
+          <th class="col-rev">Выручка</th><th class="col-drr">ДРР</th>
+        </tr></thead><tbody>`;
+        month.weeks.forEach((weekObj, wI) => {
+          const rowId = `m${mIndex}_w${wI}`; const collapsed = isWeekCollapsed(mIndex, -1, wI); const caret = collapsed ? '▸' : '▾';
+          html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},-1,${wI})">${caret}</button><div class="week-title-text">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="5"></td></tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeTotalCells(rowId,'plan')}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeTotalCells(rowId,'fact')}</tr>
+          <tr class="${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeTotalPercCells(rowId)}</tr>
+          <tr class="row-spacer ${collapsed?'week-collapsed':''}" data-week-group="m${mIndex}_c-1_w${wI}"><td colspan="7"></td></tr>`;
+        });
+        html += `</tbody></table></div></div></div></div>`;
+        return html;
       });
-      html += `</tbody></table></div></div></div></div>`;
-      return html;
-    });
-    recalcAll();
+      recalcAll();
   }
 
-  // --- CELL GENERATORS (Updated for 7 columns) ---
   function makeCells(rowId,cI,type){ 
       const id=`${rowId}_c${cI}`; 
       const vS=inputState[id+`_${type}_spend`]||''; 
       const vL=inputState[id+`_${type}_leads`]||''; 
-      const vR=inputState[id+`_${type}_revenue`]||'';
-      return `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_spend" data-kind="money" value="${formatMoney(vS)}" placeholder="-"></td>
-              <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vL)}" placeholder="-"></td>
-              <td class="cpl-cell" id="${id}_${type}_cpl">-</td>
-              <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_revenue" data-kind="money" value="${formatMoney(vR)}" placeholder="-"></td>
-              <td class="cpl-cell" id="${id}_${type}_drr">-</td>`; 
-  }
-  function makeTotalCells(rowId,type){ 
-      return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td>
-              <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td>
-              <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>
-              <td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_revenue">-</td>
-              <td class="cell-input cpl-cell" style="font-weight:900" id="${rowId}_total_${type}_drr">-</td>`; 
-  }
-  function makePercCells(rowId,cI){ 
-      return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_c${cI}_perc_revenue" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_c${cI}_perc_drr" class="badge badge-neutral">-</div></td>`; 
-  }
-  function makeTotalPercCells(rowId){ 
-      return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_total_perc_revenue" class="badge badge-neutral">-</div></td>
-              <td><div id="${rowId}_total_perc_drr" class="badge badge-neutral">-</div></td>`; 
+      const vR= type==='fact' ? (inputState[id+`_${type}_revenue`]||'') : '';
+      const disableRev = type==='plan' ? 'disabled style="opacity:0.3; pointer-events:none;"' : '';
+
+      return `<td><input type="text" inputmode="numeric" class="cell-input ${type}-spend" id="${id}_${type.charAt(0)}s" data-id="${id}_${type}_spend" data-kind="money" value="${formatMoney(vS)}" placeholder="-"></td>
+      <td class="col-leads"><input type="text" inputmode="numeric" class="cell-input ${type}-leads" id="${id}_${type.charAt(0)}l" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vL)}" placeholder="-"></td>
+      <td class="cpl-cell col-cpl" id="${id}_${type}_cpl">-</td>
+      
+      <td class="col-rev"><input type="text" inputmode="numeric" class="cell-input" id="${id}_${type.charAt(0)}r" data-id="${id}_${type}_revenue" data-kind="money" value="${formatMoney(vR)}" placeholder="-" ${disableRev}></td>
+      <td class="cpl-cell col-drr" id="${id}_${type}_drr">-</td>`; 
   }
 
-// --- SMM RENDER ---
+  function makeTotalCells(rowId,type){ 
+      return `<td class="cell-input" style="font-weight:900" id="${rowId}_total_${type}_spend">-</td>
+      <td class="cell-input col-leads" style="font-weight:900" id="${rowId}_total_${type}_leads">-</td>
+      <td class="cell-input cpl-cell col-cpl" style="font-weight:900" id="${rowId}_total_${type}_cpl">-</td>
+      <td class="cell-input col-rev" style="font-weight:900" id="${rowId}_total_${type}_rev">-</td>
+      <td class="cell-input cpl-cell col-drr" style="font-weight:900" id="${rowId}_total_${type}_drr">-</td>`; 
+  }
+
+  function makePercCells(rowId,cI){ 
+      return `<td><div id="${rowId}_c${cI}_perc_spend" class="badge badge-neutral">-</div></td>
+      <td class="col-leads"><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td>
+      <td class="col-cpl"><div id="${rowId}_c${cI}_perc_cpl" class="badge badge-neutral">-</div></td>
+      <td class="col-rev"></td><td class="col-drr"></td>`; 
+  }
+
+  function makeTotalPercCells(rowId){ 
+      return `<td><div id="${rowId}_total_perc_spend" class="badge badge-neutral">-</div></td>
+      <td class="col-leads"><div id="${rowId}_total_perc_leads" class="badge badge-neutral">-</div></td>
+      <td class="col-cpl"><div id="${rowId}_total_perc_cpl" class="badge badge-neutral">-</div></td>
+      <td class="col-rev"></td><td class="col-drr"></td>`; 
+  }
+
+function renderSMMTotalCard(mIndex, month) {
+    const groupKey = -200; 
+    let html = `<div class="channel-card total-card" style="margin-top:20px;">
+        <div class="channel-header"><div class="channel-name">ВСЕГО SMM (Сводка)</div></div>
+        <div class="channel-table-wrap"><table class="channel-table"><thead><tr>
+                        <th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Охват</th><th>Лиды</th><th>ERR</th></tr></thead><tbody>`;
+
+    month.weeks.forEach((weekObj, wI) => {
+        const collapsed = isWeekCollapsed(mIndex, groupKey, wI);
+        const caret = collapsed ? '▸' : '▾';
+        const weekId = `smm_total_m${mIndex}_w${wI}`;
+        html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${groupKey},${wI},'smm')">${caret}</button><div class="week-title-text" style="pointer-events:none">${weekObj.title}</div></div></td><td class="col-type"></td><td colspan="3"></td></tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td><td class="cell-input" style="font-weight:900" id="${weekId}_reach_plan">-</td><td class="cell-input" style="font-weight:900" id="${weekId}_leads_plan">-</td><td class="cell-input" style="font-weight:900" id="${weekId}_err_plan">-</td></tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td><td class="cell-input" style="font-weight:900" id="${weekId}_reach_fact">-</td><td class="cell-input" style="font-weight:900" id="${weekId}_leads_fact">-</td><td class="cell-input" style="font-weight:900" id="${weekId}_err_fact">-</td></tr>
+        <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td><td><div id="${weekId}_reach_perc" class="badge badge-neutral">-</div></td><td><div id="${weekId}_leads_perc" class="badge badge-neutral">-</div></td><td><div id="${weekId}_err_perc" class="badge badge-neutral">-</div></td></tr>
+        <tr class="row-spacer ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${groupKey}_w${wI}"><td colspan="5"></td></tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+    return html;
+}
+
+function calcSMMMonthTotal(mI) {
+    const month = monthsData[mI]; if (!month || !month.smmChannels) return;
+    month.weeks.forEach((w, wI) => {
+        let stats = { reach: { p: 0, f: 0 }, leads: { p: 0, f: 0 }, err: { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 } };
+        month.smmChannels.forEach((ch, cI) => {
+            ch.metrics.forEach(met => {
+                const l = met.toLowerCase();
+                const keyP = getSMMKey(mI, cI, wI, met, 'plan'); const keyF = getSMMKey(mI, cI, wI, met, 'fact');
+                const valP = inputState[keyP] || 0; const valF = inputState[keyF] || 0;
+                if (l.includes('охват') || l.includes('показы') || l.includes('просмотры')) { stats.reach.p += valP; stats.reach.f += valF; } 
+                else if (l.includes('лиды')) { stats.leads.p += valP; stats.leads.f += valF; }
+            });
+            const reachMet = findReachMetricName(ch.metrics); const errMet = findErrMetricName(ch.metrics);
+            if (reachMet && errMet) {
+                const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0; const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0;
+                if (rP > 0) { stats.err.pReactions += rP * (eP / 100); stats.err.pReach += rP; }
+                const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0; const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0;
+                if (rF > 0) { stats.err.fReactions += rF * (eF / 100); stats.err.fReach += rF; }
+            }
+        });
+        const weekId = `smm_total_m${mI}_w${wI}`;
+        txt(`${weekId}_reach_plan`, fCount(stats.reach.p)); txt(`${weekId}_reach_fact`, fCount(stats.reach.f)); badge(`${weekId}_reach_perc`, stats.reach.p, stats.reach.f);
+        txt(`${weekId}_leads_plan`, fCount(stats.leads.p)); txt(`${weekId}_leads_fact`, fCount(stats.leads.f)); badge(`${weekId}_leads_perc`, stats.leads.p, stats.leads.f);
+        const wErrP = stats.err.pReach > 0 ? (stats.err.pReactions / stats.err.pReach) * 100 : 0;
+        const wErrF = stats.err.fReach > 0 ? (stats.err.fReactions / stats.err.fReach) * 100 : 0;
+        txt(`${weekId}_err_plan`, formatPercent(wErrP)); txt(`${weekId}_err_fact`, formatPercent(wErrF)); badge(`${weekId}_err_perc`, wErrP, wErrF);
+    });
+}
+
 function renderSMM() {
     _smartRenderList('smmContainer', monthsData, 'smm', (month, mIndex) => {
-      let html = `<div class="card-top">
-      <div class="month-header">
-        <div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
-        <div style="display:flex;gap:10px;">
-            <button class="kpi-btn" onclick="openSmmModal(${mIndex})">+ Канал</button>
-            <button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button>
-        </div>
-      </div>
-      
+      let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
+      <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="openSmmModal(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
       <div class="stats-grid" style="margin-bottom:25px;">
-         <div class="stat-box">
-            <div class="stat-label">Охват (Факт/План)</div>
-            <div class="stat-val"><span id="smm_m${mIndex}_stat_reach_f">-</span> / <span id="smm_m${mIndex}_stat_reach_p" style="opacity:.6;font-size:14px">-</span></div>
-            <div class="stat-sub" id="smm_m${mIndex}_stat_reach_perc" style="margin-top:5px;font-size:12px">0%</div>
-         </div>
-         <div class="stat-box">
-            <div class="stat-label">Лиды (Факт/План)</div>
-            <div class="stat-val"><span id="smm_m${mIndex}_stat_leads_f" class="accent-text">-</span> / <span id="smm_m${mIndex}_stat_leads_p" style="opacity:.6;font-size:14px">-</span></div>
-            <div class="stat-sub" id="smm_m${mIndex}_stat_leads_perc" style="margin-top:5px;font-size:12px">0%</div>
-         </div>
-         <div class="stat-box">
-            <div class="stat-label">ERR (Факт/План)</div>
-            <div class="stat-val"><span id="smm_m${mIndex}_stat_err_f">-</span> / <span id="smm_m${mIndex}_stat_err_p" style="opacity:.6;font-size:14px">-</span></div>
-            <div class="stat-sub" id="smm_m${mIndex}_stat_err_perc" style="margin-top:5px;font-size:12px">-</div>
-         </div>
-      </div>
-      </div>
-      
+         <div class="stat-box"><div class="stat-label">Охват (Факт/План)</div><div class="stat-val"><span id="smm_m${mIndex}_stat_reach_f">-</span> / <span id="smm_m${mIndex}_stat_reach_p" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="smm_m${mIndex}_stat_reach_perc" style="margin-top:5px;font-size:12px">0%</div></div>
+         <div class="stat-box"><div class="stat-label">Лиды (Факт/План)</div><div class="stat-val"><span id="smm_m${mIndex}_stat_leads_f" class="accent-text">-</span> / <span id="smm_m${mIndex}_stat_leads_p" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="smm_m${mIndex}_stat_leads_perc" style="margin-top:5px;font-size:12px">0%</div></div>
+         <div class="stat-box"><div class="stat-label">ERR (Факт/План)</div><div class="stat-val"><span id="smm_m${mIndex}_stat_err_f">-</span> / <span id="smm_m${mIndex}_stat_err_p" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="smm_m${mIndex}_stat_err_perc" style="margin-top:5px;font-size:12px">-</div></div>
+      </div></div>
       <div class="smm-month-body" style="${month.collapsed?'display:none':''}"><div class="smm-stack-grid">`;
-      
       (month.smmChannels || []).forEach((channel, cIndex) => {
-        html += `<div class="channel-card"><div class="channel-header">
-        <div>
-            <div class="channel-name">${channel.name} <span class="add-metric-btn" onclick="openAddMetricModal(${mIndex}, ${cIndex})">+ Метрика</span><span class="delete-ch-btn" onclick="deleteSmmChannel(${mIndex},${cIndex})">×</span></div>
-            <div class="mini-grid">
-                ${channel.metrics.map(met => {
-                   const slug = slugify(met);
-                   return `<div class="mini-chip">${met}: <strong class="accent"><span id="smm_mini_f_m${mIndex}_c${cIndex}_${slug}">-</span></strong><span class="mini-plan" id="smm_mini_p_m${mIndex}_c${cIndex}_${slug}">/ -</span><span id="smm_mini_perc_m${mIndex}_c${cIndex}_${slug}"></span></div>`;
-                }).join('')}
-            </div>
-        </div>
-        </div>
+        html += `<div class="channel-card"><div class="channel-header"><div><div class="channel-name">${channel.name} <span class="add-metric-btn" onclick="openAddMetricModal(${mIndex}, ${cIndex})">+ Метрика</span><span class="delete-ch-btn" onclick="deleteSmmChannel(${mIndex},${cIndex})">×</span></div>
+        <div class="mini-grid">${channel.metrics.map(met => { const slug = slugify(met); return `<div class="mini-chip">${met}: <strong class="accent"><span id="smm_mini_f_m${mIndex}_c${cIndex}_${slug}">-</span></strong><span class="mini-plan" id="smm_mini_p_m${mIndex}_c${cIndex}_${slug}">/ -</span><span id="smm_mini_perc_m${mIndex}_c${cIndex}_${slug}"></span></div>`; }).join('')}</div></div></div>
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th>`;
         channel.metrics.forEach(metric => { html += `<th>${metric} <span class="del-col-btn" onclick="deleteSmmMetric(${mIndex}, ${cIndex}, '${metric}')">×</span></th>`; });
         html += `</tr></thead><tbody>`;
         month.weeks.forEach((weekObj, wI) => {
-          const collapsed = isWeekCollapsed(mIndex, cIndex, wI); const caret = collapsed ? '▸' : '▾'; 
-          const uniqueWeekId = `smm_d_m${mIndex}_c${cIndex}_w${wI}`;
-          const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId];
-          const activeClass = isDaysExpanded ? 'active' : '';
-
+          const collapsed = isWeekCollapsed(mIndex, cIndex, wI); const caret = collapsed ? '▸' : '▾'; const uniqueWeekId = `smm_d_m${mIndex}_c${cIndex}_w${wI}`; const isDaysExpanded = !!inputState['ui_days_expanded_' + uniqueWeekId]; const activeClass = isDaysExpanded ? 'active' : '';
           html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleWeek(${mIndex},${cIndex},${wI},'smm')">${caret}</button><div class="week-title-text" style="pointer-events:none">${weekObj.title}</div>${(weekObj.days||[]).length > 0 ? `<button class="days-icon-btn ${activeClass}" id="btn-day-${uniqueWeekId}" onclick="toggleDays('${uniqueWeekId}')"><span class="icon-bars"></span></button>` : ''}</div></td><td class="col-type"></td>`;
           channel.metrics.forEach(() => { html += `<td></td>`; }); html += `</tr>
           <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeSMMCells(mIndex, cIndex, wI, 'plan', channel.metrics)}</tr>
           <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeSMMCells(mIndex, cIndex, wI, 'fact', channel.metrics)}</tr>
           <tr class="${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>${makeSMMPercCells(mIndex, cIndex, wI, channel.metrics)}</tr>`;
-          (weekObj.days||[]).forEach((day, dI) => {
-             html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td>
-             <td class="col-type" style="opacity:0.3;font-size:10px;">День</td>${makeSMMDayCells(mIndex, cIndex, wI, dI, channel.metrics)}</tr>`;
-          });
+          (weekObj.days||[]).forEach((day, dI) => { html += `<tr class="day-row day-row-${uniqueWeekId} ${activeClass} ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td class="col-sticky-1 day-label-cell"><div style="display:flex;justify-content:flex-end;gap:6px;"><span class="day-name">${day.name}</span> <span>${day.num}</span></div></td><td class="col-type" style="opacity:0.3;font-size:10px;">День</td>${makeSMMDayCells(mIndex, cIndex, wI, dI, channel.metrics)}</tr>`; });
           html += `<tr class="row-spacer ${collapsed?'week-collapsed':''}" data-smm-week-group="m${mIndex}_c${cIndex}_w${wI}"><td colspan="${2+channel.metrics.length}"></td></tr>`;
         });
         html += `</tbody></table></div></div>`;
       });
-
-      if(typeof renderSMMTotalCard === 'function') {
-         html += renderSMMTotalCard(mIndex, month);
-      }
-
+      if(typeof renderSMMTotalCard === 'function') { html += renderSMMTotalCard(mIndex, month); }
       html += `</div></div>`;
       return html;
     });
     recalcAllSMM();
 }
 
-  // --- CALC LOGIC (Updated with DRR & Revenue) ---
-  function recalc(id){
-    const parts=id.split('_'); let mI=-1,wI=-1,cI=-1;
-    if(id.includes('_d')){
-        const mKey=parts.find(p=>p.startsWith('m')); const wKey=parts.find(p=>p.startsWith('w')); const cKey=parts.find(p=>p.startsWith('c'));
-        if(mKey) mI=parseInt(mKey.replace('m','')); if(wKey) wI=parseInt(wKey.replace('w','')); if(cKey) cI=parseInt(cKey.replace('c',''));
-        calcDaysToWeek(mI,wI,cI);
-    } else {
-        const mKey=parts[0]; const wKey=parts[1]; const cKey=parts[2];
-        if(mKey&&wKey&&cKey){ mI=parseInt(mKey.replace('m','')); wI=parseInt(wKey.replace('w','')); cI=parseInt(cKey.replace('c','')); calcDaysToWeek(mI,wI,cI); }
-    }
-    if(mI>=0&&wI>=0&&cI>=0) { calcRow(`m${mI}_w${wI}_c${cI}`); calcWeekTotal(`m${mI}`,`w${wI}`); calcChannelGrand(mI,cI); calcGrand(`m${mI}`); }
-  }
-  
-  function calcDaysToWeek(mI, wI, cI) {
-    const month=monthsData[mI]; if(!month) return; 
-    const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
-    const days=weekObj.days; const rowId=`m${mI}_w${wI}`;
-    
-    // Получаем планы для валидации дней
-    const planSpend=inputState[`${rowId}_c${cI}_plan_spend`]||0; 
-    const planLeads=inputState[`${rowId}_c${cI}_plan_leads`]||0;
-    const dayTargetS=planSpend>0?(planSpend/7):0; 
-    const dayTargetL=planLeads>0?(planLeads/7):0; 
-    const targetCPL=planLeads>0?(planSpend/planLeads):0;
-    
-    let sumS=0, sumL=0, sumR=0;
-    
-    days.forEach((d,dI)=>{
-        const dayId=`${rowId}_d${dI}_c${cI}`; 
-        const valS=inputState[`${dayId}_spend`]||0; 
-        const valL=inputState[`${dayId}_leads`]||0;
-        const valR=inputState[`${dayId}_revenue`]||0;
-        sumS+=valS; sumL+=valL; sumR+=valR;
-        
-        // Валидация цветов ячеек (день)
-        const elS=document.querySelector(`input[data-id="${dayId}_spend"]`); 
-        const elL=document.querySelector(`input[data-id="${dayId}_leads"]`); 
-        const elC=document.getElementById(`${dayId}_cpl`);
-        
-        if(elS && elL){
-            elS.classList.remove('smart-input-bad','smart-input-good'); elL.classList.remove('smart-input-bad','smart-input-good');
-            if(valS>0 && dayTargetS>0 && valS>dayTargetS*1.15) elS.classList.add('smart-input-bad');
-            if(planLeads>0){ if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); }
-            if(valL>0){ const dc=Math.round(valS/valL); let cls="day-cpl-neutral"; if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; }
-            else elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
-        }
-    });
-    
-    // Сохраняем агрегированные факты
-    inputState[`${rowId}_c${cI}_fact_spend`]=sumS; 
-    inputState[`${rowId}_c${cI}_fact_leads`]=sumL; 
-    inputState[`${rowId}_c${cI}_fact_revenue`]=sumR;
-    
-    // Обновляем поля ввода недели
-    const wInpS=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_spend"]`); if(wInpS) wInpS.value=formatMoney(sumS);
-    const wInpL=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_leads"]`); if(wInpL) wInpL.value=formatCount(sumL);
-    const wInpR=document.querySelector(`input[data-id="${rowId}_c${cI}_fact_revenue"]`); if(wInpR) wInpR.value=formatMoney(sumR);
-  }
-  
-  function calcRow(id){ 
-      const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const pr=inputState[`${id}_plan_revenue`]||0;
-      const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; const fr=inputState[`${id}_fact_revenue`]||0;
-      
-      // Выводим расчетные CPL и ДРР
-      txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); 
-      txt(`${id}_plan_drr`,formatDrr(drrValue(ps,pr))); txt(`${id}_fact_drr`,formatDrr(drrValue(fs,fr)));
-      
-      // Обновляем бейджи выполнения плана (%)
-      badge(`${id}_perc_spend`,ps,fs,true); 
-      badge(`${id}_perc_leads`,pl,fl); 
-      badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true);
-      badge(`${id}_perc_revenue`,pr,fr); 
-      
-      // ДРР Специальный бейдж с логикой светофора (25/36)
-      const elDrr = document.getElementById(`${id}_perc_drr`);
-      if(elDrr) {
-          const pDrr = drrValue(ps,pr); const fDrr = drrValue(fs,fr);
-          if(pDrr <= 0 && fDrr <= 0) { elDrr.innerHTML='-'; elDrr.className='badge badge-neutral'; }
-          else {
-              elDrr.innerText = Math.round(fDrr) + '%';
-              elDrr.className = 'badge';
-              if(fDrr <= 25) elDrr.classList.add('badge-drr-good');
-              else if(fDrr <= 36) elDrr.classList.add('badge-drr-mid');
-              else elDrr.classList.add('badge-drr-bad');
-          }
-      }
-  }
-  
-  function calcWeekTotal(m,w){ 
-      let s={ps:0,pl:0,pr:0, fs:0,fl:0,fr:0}; const mI=parseInt(m.replace('m','')); 
-      (monthsData[mI].channels||[]).forEach((_,i)=>{ 
-          const id=`${m}_${w}_c${i}`; 
-          s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.pr+=inputState[`${id}_plan_revenue`]||0;
-          s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; s.fr+=inputState[`${id}_fact_revenue`]||0;
-      }); 
-      const rowId=`${m}_${w}_total`;
-      txt(`${rowId}_plan_spend`,fRub(s.ps)); txt(`${rowId}_plan_leads`,fCount(s.pl)); txt(`${rowId}_plan_revenue`,fRub(s.pr));
-      txt(`${rowId}_fact_spend`,fRub(s.fs)); txt(`${rowId}_fact_leads`,fCount(s.fl)); txt(`${rowId}_fact_revenue`,fRub(s.fr));
-      txt(`${rowId}_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${rowId}_fact_cpl`,fRub(cplValue(s.fs,s.fl)));
-      txt(`${rowId}_plan_drr`,formatDrr(drrValue(s.ps,s.pr))); txt(`${rowId}_fact_drr`,formatDrr(drrValue(s.fs,s.fr)));
-      
-      badge(`${rowId}_perc_spend`,s.ps,s.fs,true); badge(`${rowId}_perc_leads`,s.pl,s.fl); badge(`${rowId}_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true);
-      badge(`${rowId}_perc_revenue`,s.pr,s.fr); 
-      
-      // DRR Total Badge
-      const elDrr = document.getElementById(`${rowId}_perc_drr`);
-      if(elDrr) {
-          const fDrr = drrValue(s.fs,s.fr);
-          if(fDrr <= 0) { elDrr.innerHTML='-'; elDrr.className='badge badge-neutral'; }
-          else {
-              elDrr.innerText = Math.round(fDrr) + '%'; elDrr.className = 'badge';
-              if(fDrr <= 25) elDrr.classList.add('badge-drr-good');
-              else if(fDrr <= 36) elDrr.classList.add('badge-drr-mid');
-              else elDrr.classList.add('badge-drr-bad');
-          }
-      }
-  }
-  
-  function calcChannelGrand(mI,cI){ 
-      let ps=0,pl=0,pr=0, fs=0,fl=0,fr=0; const weeks=monthsData[mI].weeks; 
-      weeks.forEach((w,wI)=>{ 
-          const id=`m${mI}_w${wI}_c${cI}`; 
-          ps+=inputState[`${id}_plan_spend`]||0; pl+=inputState[`${id}_plan_leads`]||0; pr+=inputState[`${id}_plan_revenue`]||0;
-          fs+=inputState[`${id}_fact_spend`]||0; fl+=inputState[`${id}_fact_leads`]||0; fr+=inputState[`${id}_fact_revenue`]||0;
-      }); 
-      let totalDays=0, activeDays=0; 
-      weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
-          if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ const dId=`m${mI}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; }); } 
-          else { if((inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0)>0) activeDays+=7; } 
-      }); 
-      const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
-      
-      // Вывод в Mini Grid (шапка канала)
-      txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
-      txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
-      const pcpl = cplValue(ps,pl); const fcpl = cplValue(fs,fl);
-      txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
-      
-      // REV & DRR mini
-      txt(`m${mI}_c${cI}_mini_frev`,fRub(fr)); txt(`m${mI}_c${cI}_mini_prev`,"/ " + fRub(pr));
-      const pDrr = drrValue(ps,pr); const fDrr = drrValue(fs,fr);
-      txt(`m${mI}_c${cI}_mini_fdrr`,formatDrr(fDrr)); txt(`m${mI}_c${cI}_mini_pdrr`,"/ " + formatDrr(pDrr));
-
-      const timeProgress = getMonthTimeProgress(monthsData[mI].name);
-      const setMiniBadge = (id, plan, fact, invert, isRate) => {
-          const el = document.getElementById(id); if(!el) return;
-          if(plan <= 0) { el.className=''; el.innerText=''; return; }
-          const completion = fact / plan; const pShow = Math.round(completion * 100);
-          el.innerText = pShow + '%'; el.className = 'mini-perc';
-          const targetProgress = isRate ? 1.0 : timeProgress; const tolerance = 0.1; let status = 'bad';
-          if(invert) { if (completion <= targetProgress) status = 'good'; else if (completion <= (targetProgress + tolerance)) status = 'warning'; else status = 'bad'; } 
-          else { if (completion >= targetProgress) status = 'good'; else if (completion >= (targetProgress - tolerance)) status = 'warning'; else status = 'bad'; }
-          if(status === 'good') el.classList.add('good'); else if(status === 'warning') el.classList.add('warning'); else el.classList.add('bad');
-      };
-      
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false);    
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false);   
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); 
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_rev`, pr, fr, false, false); 
-      
-      // ДРР Мини-бейдж (светофор)
-      const elDrr = document.getElementById(`m${mI}_c${cI}_mini_perc_drr`);
-      if(elDrr) {
-          if(fDrr <= 0) { elDrr.innerText = ''; elDrr.className=''; }
-          else {
-              elDrr.innerText = Math.round(fDrr) + '%';
-              elDrr.className = 'mini-perc';
-              if(fDrr <= 25) elDrr.classList.add('good');
-              else if(fDrr <= 36) elDrr.classList.add('warning');
-              else elDrr.classList.add('bad');
-          }
-      }
-  }
-  function calcGrand(m){ let s={ps:0,pl:0,fs:0,fl:0}; const mI=parseInt(m.replace('m','')); const chs=monthsData[mI].channels||[]; monthsData[mI].weeks.forEach((_,wI)=>{ chs.forEach((_,cI)=>{ const id=`${m}_w${wI}_c${cI}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; }); }); txt(`${m}_stat_ps`,fRub(s.ps)); txt(`${m}_stat_fs`,fRub(s.fs)); txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_stat_percs`,(s.ps>0?Math.round((s.fs/s.ps)*100):0)+"%"); txt(`${m}_stat_percl`,(s.pl>0?Math.round((s.fl/s.pl)*100):0)+"%"); const pCpl=cplValue(s.ps,s.pl); const fCpl=cplValue(s.fs,s.fl); const elPerc=document.getElementById(`${m}_stat_perccpl`); if(elPerc){ if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; else { const pc=Math.round((fCpl/pCpl)*100); const col=pc<=100?'#30D158':'#FF453A'; elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; } } let totalDays=0, activeDays=0; monthsData[mI].weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ let act=false; chs.forEach((_,cI)=>{ const dId=`${m}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)|| (inputState[`${dId}_leads`]||0)) act=true; }); if(act) activeDays++; }); } else { let act=false; chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); if(act) activeDays+=7; } }); const fc=activeDays>0?Math.round((s.fl/activeDays)*totalDays):0; txt(`${m}_stat_forecast`,fCount(fc)); }
-  function recalcAll(){ monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> (m.channels||[]).forEach((c,cI)=>{ calcDaysToWeek(mI, wI, cI); calcRow(`m${mI}_w${wI}_c${cI}`); }))); monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> calcWeekTotal(`m${mI}`, `w${wI}`))); monthsData.forEach((m,mI)=> { calcGrand(`m${mI}`); (m.channels||[]).forEach((c,cI)=> calcChannelGrand(mI, cI)); }); }
-
-  // --- OVERVIEW & CHARTS ---
+  // --- OVERVIEW RENDER (PATCHED FINANCE) ---
   function renderOverview() {
     const labels = [];
     const tfSpendF = [], tfSpendP = [];
     const tfLeadsF = [], tfLeadsP = [];
     const tfCplF = [], tfCplP = [];
-    const tfRevF = [], tfDrrF = []; // New
-    
     const smmLeadsF = [], smmLeadsP = [];
     const smmReachF = [], smmReachP = [];
     const smmSubsF = [], smmSubsP = [];
+    const revF = [], drrF = [];
 
     const lastIdx = monthsData.length - 1;
-    let currStats = { s:0, ps:0, l:0, pl:0, cpl:0, pcpl:0, r:0, pr:0, drr:0, pdrr:0, smmL:0, smmPL:0, smmR:0, smmPR:0, smmS:0, smmPS:0 };
+    let currStats = { s:0, ps:0, l:0, pl:0, cpl:0, pcpl:0, smmL:0, smmPL:0, smmR:0, smmPR:0, smmS:0, smmPS:0, rev:0, drr:0 };
 
     monthsData.forEach((m, mI) => {
         labels.push(m.name);
         
-        let ps=0, pl=0, pr=0, fs=0, fl=0, fr=0;
+        let ps=0, pl=0, fs=0, fl=0, fr=0;
         const chs = m.channels || [];
         m.weeks.forEach((_, wI) => {
             chs.forEach((_, cI) => {
                 const id = `m${mI}_w${wI}_c${cI}`;
                 ps += inputState[`${id}_plan_spend`] || 0;
                 pl += inputState[`${id}_plan_leads`] || 0;
-                pr += inputState[`${id}_plan_revenue`] || 0;
                 fs += inputState[`${id}_fact_spend`] || 0;
                 fl += inputState[`${id}_fact_leads`] || 0;
                 fr += inputState[`${id}_fact_revenue`] || 0;
@@ -1397,20 +1255,16 @@ function renderSMM() {
         
         tfSpendF.push(fs); tfSpendP.push(ps);
         tfLeadsF.push(fl); tfLeadsP.push(pl);
-        tfRevF.push(fr); 
-        
+        revF.push(fr); 
+
         const cpl = (fs > 0 && fl > 0) ? Math.round(fs / fl) : 0;
         const pcpl = (ps > 0 && pl > 0) ? Math.round(ps / pl) : 0;
         tfCplF.push(cpl); tfCplP.push(pcpl);
-        
-        const drr = (fr > 0) ? (fs / fr) * 100 : 0;
-        const pdrr = (pr > 0) ? (ps / pr) * 100 : 0;
-        tfDrrF.push(drr); 
 
-        let reachF=0, reachP=0; 
-        let leadsF=0, leadsP=0;
-        let subsF=0, subsP=0;
+        const drr = calcDrrVal(fs, fr);
+        drrF.push(drr.toFixed(1));
 
+        let reachF=0, reachP=0; let leadsF=0, leadsP=0; let subsF=0, subsP=0;
         (m.smmChannels || []).forEach((ch, cI) => {
              ch.metrics.forEach(metricName => {
                  const isReach = metricName.includes('Охват') || metricName.includes('Показы') || metricName.includes('Просмотры');
@@ -1432,10 +1286,7 @@ function renderSMM() {
         smmSubsF.push(subsF);   smmSubsP.push(subsP);
 
         if(mI === lastIdx) {
-            currStats = { 
-                s:fs, ps:ps, l:fl, pl:pl, cpl:cpl, pcpl:pcpl, r:fr, pr:pr, drr:drr, pdrr:pdrr,
-                smmL: leadsF, smmPL: leadsP, smmR: reachF, smmPR: reachP, smmS: subsF, smmPS: subsP 
-            };
+            currStats = { s:fs, ps:ps, l:fl, pl:pl, cpl:cpl, pcpl:pcpl, smmL: leadsF, smmPL: leadsP, smmR: reachF, smmPR: reachP, smmS: subsF, smmPS: subsP, rev:fr, drr:drr };
         }
     });
 
@@ -1455,17 +1306,10 @@ function renderSMM() {
         if(currStats.pcpl > 0 && currStats.cpl > 0) {
             renderDev(document.getElementById('ov_curr_cpl_perc'), currStats.pcpl, currStats.cpl, true, 1, true);
         } else { document.getElementById('ov_curr_cpl_perc').innerText = '-'; }
-        
-        // REV
-        document.getElementById('ov_curr_rev').innerText = formatMoney(currStats.r);
-        document.getElementById('ov_curr_rev_plan').innerText = `План: ${formatMoney(currStats.pr)}`;
-        renderDev(document.getElementById('ov_curr_rev_perc'), currStats.pr, currStats.r, false, timeProgress, false);
-        
-        // DRR
-        document.getElementById('ov_curr_drr').innerText = formatDrr(currStats.drr);
-        if(currStats.pdrr > 0 && currStats.drr > 0) {
-            renderDev(document.getElementById('ov_curr_drr_perc'), currStats.pdrr, currStats.drr, true, 1, true);
-        } else { document.getElementById('ov_curr_drr_perc').innerText = '-'; }
+
+        document.getElementById('ov_curr_rev').innerText = formatMoney(currStats.rev);
+        const elDrr = document.getElementById('ov_curr_drr');
+        elDrr.innerHTML = `<span class="${getDrrClass(currStats.drr)}">${formatDrr(currStats.drr)}</span>`;
 
         document.getElementById('ov_curr_smm_leads').innerText = formatCount(currStats.smmL);
         document.getElementById('ov_curr_smm_leads_plan').innerText = `План: ${formatCount(currStats.smmPL)}`;
@@ -1479,27 +1323,167 @@ function renderSMM() {
         document.getElementById('ov_curr_smm_reach_plan').innerText = `План: ${formatCount(currStats.smmPR)}`;
         renderDev(document.getElementById('ov_curr_smm_reach_perc'), currStats.smmPR, currStats.smmR, false, timeProgress, false);
     }
-    initCharts(labels, tfSpendF, tfSpendP, tfLeadsF, tfLeadsP, tfCplF, tfCplP, tfRevF, tfDrrF, smmLeadsF, smmLeadsP, smmReachF, smmReachP, smmSubsF, smmSubsP);
+    initCharts(labels, tfSpendF, tfSpendP, tfLeadsF, tfLeadsP, tfCplF, tfCplP, smmLeadsF, smmLeadsP, smmReachF, smmReachP, smmSubsF, smmSubsP, revF, drrF);
   }
 
-  function initCharts(labels, sF, sP, lF, lP, cF, cP, rF, dF, slF, slP, srF, srP, ssF, ssP) {
-      createLineChart('chartTrafficSpend', labels, 'Расход Факт', sF, '#3B82F6', 'Расход План', sP);
-      createLineChart('chartTrafficLeads', labels, 'Лиды Факт', lF, '#30D158', 'Лиды План', lP);
-      createLineChart('chartCPL', labels, 'CPL Факт', cF, '#F59E0B', 'CPL План', cP);
-      createLineChart('chartTrafficRev', labels, 'Выручка Факт', rF, '#10B981', null, []); 
-      createLineChart('chartDRR', labels, 'ДРР Факт %', dF, '#EC4899', null, []);
+  function renderDev(el, plan, fact, invert, timeProgress = 1, isRate = false) {
+     if(plan <= 0) { el.innerText = ''; return; }
+     const completionPerc = (fact/plan); 
+     const pShow = Math.round(completionPerc * 100);
+     const tolerance = 0.1; 
+     let status = 'bad'; 
+
+     if (isRate) {
+         if(invert) {
+             if (fact <= plan) status = 'good'; else if (fact <= plan * (1 + tolerance)) status = 'warning'; else status = 'bad';
+         } else {
+             if (fact >= plan) status = 'good'; else if (fact >= plan * (1 - tolerance)) status = 'warning'; else status = 'bad';
+         }
+     } else {
+         if(invert) {
+             if (completionPerc <= timeProgress) status = 'good'; else if (completionPerc <= (timeProgress + tolerance)) status = 'warning'; else status = 'bad';
+         } else {
+             if (completionPerc >= timeProgress) status = 'good'; else if (completionPerc >= (timeProgress - tolerance)) status = 'warning'; else status = 'bad';
+         }
+     }
+     
+     let cls = 'trend-bad';
+     if (status === 'good') cls = 'trend-good'; if (status === 'warning') cls = 'trend-warning';
+     el.innerHTML = `<span class="${cls}">${pShow}%</span> выполнения`;
+  }
+
+  function initCharts(labels, sF, sP, lF, lP, cF, cP, slF, slP, srF, srP, ssF, ssP, revF, drrF) {
+     createLineChart('chartTrafficSpend', labels, 'Расход Факт', sF, '#3B82F6', 'Расход План', sP);
+     createLineChart('chartTrafficLeads', labels, 'Лиды Факт', lF, '#30D158', 'Лиды План', lP);
+     createLineChart('chartCPL', labels, 'CPL Факт', cF, '#F59E0B', 'CPL План', cP);
+     createLineChart('chartRevenue', labels, 'Выручка', revF, '#10B981', '', []);
+     createLineChart('chartDRR', labels, 'ДРР %', drrF, '#F59E0B', '', []);
+     
+     createLineChart('chartSMMLeads', labels, 'SMM Лиды Факт', slF, '#A855F7', 'SMM Лиды План', slP);
+     createLineChart('chartSMMSubs', labels, 'Приток Факт', ssF, '#EC4899', 'Приток План', ssP);
+     createLineChart('chartSMMReach', labels, 'Охват Факт', srF, '#6366F1', 'Охват План', srP);
+  }
+
+  function createLineChart(canvasId, labels, label1, data1, color1, label2, data2) {
+      const ctx = document.getElementById(canvasId);
+      if(!ctx) return;
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      chartInstances[canvasId] = new Chart(ctx, {
+          type: 'line',
+          data: { labels: labels, datasets: [
+                  { label: label1, data: data1, borderColor: color1, backgroundColor: color1, borderWidth: 2, tension: 0.3, pointRadius: 3 },
+                  { label: label2, data: data2, borderColor: color1, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 4], tension: 0.3, pointRadius: 0, pointHoverRadius: 0, opacity: 0.5 }
+              ] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9CA3AF', font: {family:'Inter'} } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9CA3AF' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9CA3AF' }, beginAtZero: true } } }
+      });
+  }
+
+  // ==========================================
+  // 7. CALC LOGIC (PATCHED FINANCE)
+  // ==========================================
+  function recalc(id){
+    const parts=id.split('_'); let mI=-1,wI=-1,cI=-1;
+    if(id.includes('_d')){
+        const mKey=parts.find(p=>p.startsWith('m')); const wKey=parts.find(p=>p.startsWith('w')); const cKey=parts.find(p=>p.startsWith('c'));
+        if(mKey) mI=parseInt(mKey.replace('m','')); if(wKey) wI=parseInt(wKey.replace('w','')); if(cKey) cI=parseInt(cKey.replace('c',''));
+        calcDaysToWeek(mI,wI,cI);
+    } else {
+        const mKey=parts[0]; const wKey=parts[1]; const cKey=parts[2];
+        if(mKey&&wKey&&cKey){ mI=parseInt(mKey.replace('m','')); wI=parseInt(wKey.replace('w','')); cI=parseInt(cKey.replace('c','')); calcDaysToWeek(mI,wI,cI); }
+    }
+    if(mI>=0&&wI>=0&&cI>=0) { calcWeekTotal(`m${mI}`,`w${wI}`); calcChannelGrand(mI,cI); calcGrand(`m${mI}`); }
+  }
+
+  function calcDaysToWeek(mI, wI, cI) {
+      const month=monthsData[mI]; if(!month) return; const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
+      const days=weekObj.days; const rowId=`m${mI}_w${wI}`;
+      const planSpend=inputState[`${rowId}_c${cI}_plan_spend`]||0; const planLeads=inputState[`${rowId}_c${cI}_plan_leads`]||0;
+      const dayTargetS=planSpend>0?(planSpend/7):0; const dayTargetL=planLeads>0?(planLeads/7):0; const targetCPL=planLeads>0?(planSpend/planLeads):0;
+      let sumS=0, sumL=0, sumR=0;
+      days.forEach((d,dI)=>{
+          const dayId=`${rowId}_d${dI}_c${cI}`; 
+          const valS=inputState[`${dayId}_spend`]||0; const valL=inputState[`${dayId}_leads`]||0; const valR=inputState[`${dayId}_revenue`]||0;
+          sumS+=valS; sumL+=valL; sumR+=valR;
+          const elS=document.getElementById(`${dayId}_spend`); const elL=document.getElementById(`${dayId}_leads`); const elC=document.getElementById(`${dayId}_cpl`); const elDrr=document.getElementById(`${dayId}_drr`);
+          if(elS && elL){
+              elS.classList.remove('smart-input-bad','smart-input-good'); elL.classList.remove('smart-input-bad','smart-input-good');
+              if(valS>0 && dayTargetS>0 && valS>dayTargetS*1.15) elS.classList.add('smart-input-bad');
+              if(planLeads>0){ if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); }
+              if(valL>0){ const dc=Math.round(valS/valL); let cls="day-cpl-neutral"; if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; }
+              else elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
+          }
+          if(elDrr) {
+             if(valR > 0) { const drr = (valS / valR) * 100; elDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NFP.format(drr)}%</span>`; } 
+             else { elDrr.innerHTML = valS > 0 ? '<span class="drr-bad">inf</span>' : '-'; }
+          }
+      });
+      inputState[`${rowId}_c${cI}_fact_spend`]=sumS; inputState[`${rowId}_c${cI}_fact_leads`]=sumL; inputState[`${rowId}_c${cI}_fact_revenue`]=sumR;
+      const wInpS=document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value=formatMoney(sumS);
+      const wInpL=document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value=formatCount(sumL);
+      const wInpR=document.getElementById(`${rowId}_c${cI}_fr`); if(wInpR) wInpR.value=formatMoney(sumR);
+      const wInpDrr=document.getElementById(`${rowId}_c${cI}_fact_drr`); if(wInpDrr) { const wDrr = calcDrrVal(sumS, sumR); wInpDrr.innerHTML = `<span class="${getDrrClass(wDrr)}">${formatDrr(wDrr)}</span>`; }
+  }
+
+  function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
+  function txt(id, v){ const el=document.getElementById(id); if(el) el.innerText=v; }
+  function badge(id, plan, fact, invert=false){ const el=document.getElementById(id); if(!el) return; plan=+plan||0; fact=+fact||0; if(plan<=0){ el.className='badge badge-neutral'; el.innerText='-'; return; } const p=Math.round((fact/plan)*100); let cls='badge-neutral'; if(invert){ if(p<=100) cls='badge-good'; else cls='badge-bad'; } else { if(p>=100) cls='badge-good'; else cls='badge-bad'; } el.className=`badge ${cls}`; el.innerText=p+'%'; }
+  
+  function calcWeekTotal(m,w){ 
+      let s={ps:0,pl:0,fs:0,fl:0, fr:0}; const mI=parseInt(m.replace('m','')); 
+      (monthsData[mI].channels||[]).forEach((_,i)=>{ const id=`${m}_${w}_c${i}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; s.fr+=inputState[`${id}_fact_revenue`]||0; }); 
+      txt(`${m}_${w}_total_plan_spend`,fRub(s.ps)); txt(`${m}_${w}_total_plan_leads`,fCount(s.pl)); 
+      txt(`${m}_${w}_total_fact_spend`,fRub(s.fs)); txt(`${m}_${w}_total_fact_leads`,fCount(s.fl)); txt(`${m}_${w}_total_fact_rev`,fRub(s.fr));
+      txt(`${m}_${w}_total_plan_cpl`,fRub(cplValue(s.ps,s.pl))); txt(`${m}_${w}_total_fact_cpl`,fRub(cplValue(s.fs,s.fl))); 
+      const wDrr = calcDrrVal(s.fs, s.fr); const elWDrr = document.getElementById(`${m}_${w}_total_fact_drr`); if(elWDrr) elWDrr.innerHTML = `<span class="${getDrrClass(wDrr)}">${formatDrr(wDrr)}</span>`;
+      badge(`${m}_${w}_total_perc_spend`,s.ps,s.fs,true); badge(`${m}_${w}_total_perc_leads`,s.pl,s.fl); badge(`${m}_${w}_total_perc_cpl`,cplValue(s.ps,s.pl),cplValue(s.fs,s.fl),true); 
+  }
+  
+  function calcChannelGrand(mI,cI){ 
+      let ps=0,pl=0,fs=0,fl=0,fr=0; const weeks=monthsData[mI].weeks; 
+      weeks.forEach((w,wI)=>{ const id=`m${mI}_w${wI}_c${cI}`; ps+=inputState[`${id}_plan_spend`]||0; pl+=inputState[`${id}_plan_leads`]||0; fs+=inputState[`${id}_fact_spend`]||0; fl+=inputState[`${id}_fact_leads`]||0; fr+=inputState[`${id}_fact_revenue`]||0; }); 
+      let totalDays=0, activeDays=0; weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ const dId=`m${mI}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; }); } else { const wfs=inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0; if(wfs>0) activeDays+=7; } }); const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
       
-      createLineChart('chartSMMLeads', labels, 'SMM Лиды Факт', slF, '#A855F7', 'SMM Лиды План', slP);
-      createLineChart('chartSMMSubs', labels, 'Приток Факт', ssF, '#EC4899', 'Приток План', ssP);
-      createLineChart('chartSMMReach', labels, 'Охват Факт', srF, '#6366F1', 'Охват План', srP);
+      txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
+      txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
+      const pcpl = cplValue(ps,pl); const fcpl = cplValue(fs,fl); txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
+      txt(`m${mI}_c${cI}_mini_rev`, fRub(fr));
+      const chDrr = calcDrrVal(fs, fr); const elDrrMini = document.getElementById(`m${mI}_c${cI}_mini_drr`); if(elDrrMini) { elDrrMini.innerHTML = `<span class="${getDrrClass(chDrr)}">${formatDrr(chDrr)}</span>`; }
+
+      const timeProgress = getMonthTimeProgress(monthsData[mI].name);
+      const setMiniBadge = (id, plan, fact, invert, isRate) => {
+           const el = document.getElementById(id); if(!el) return; if(plan <= 0) { el.className=''; el.innerText=''; return; }
+           const completion = fact / plan; const pShow = Math.round(completion * 100); el.innerText = pShow + '%'; el.className = 'mini-perc';
+           const targetProgress = isRate ? 1.0 : timeProgress; const tolerance = 0.1; let status = 'bad';
+           if(invert) { if (completion <= targetProgress) status = 'good'; else if (completion <= (targetProgress + tolerance)) status = 'warning'; else status = 'bad'; } 
+           else { if (completion >= targetProgress) status = 'good'; else if (completion >= (targetProgress - tolerance)) status = 'warning'; else status = 'bad'; }
+           if(status === 'good') el.classList.add('good'); else if(status === 'warning') el.classList.add('warning'); else el.classList.add('bad');
+      };
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false); setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false); setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); 
   }
 
+  function calcGrand(m){ 
+      let s={ps:0,pl:0,fs:0,fl:0, fr:0}; const mI=parseInt(m.replace('m','')); const chs=monthsData[mI].channels||[]; 
+      monthsData[mI].weeks.forEach((_,wI)=>{ chs.forEach((_,cI)=>{ const id=`${m}_w${wI}_c${cI}`; s.ps+=inputState[`${id}_plan_spend`]||0; s.pl+=inputState[`${id}_plan_leads`]||0; s.fs+=inputState[`${id}_fact_spend`]||0; s.fl+=inputState[`${id}_fact_leads`]||0; s.fr+=inputState[`${id}_fact_revenue`]||0; }); }); 
+      txt(`${m}_stat_ps`,fRub(s.ps)); txt(`${m}_stat_fs`,fRub(s.fs)); txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); 
+      txt(`${m}_stat_rev`, fRub(s.fr)); const grandDrr = calcDrrVal(s.fs, s.fr); const elGrandDrr = document.getElementById(`${m}_stat_drr`); if(elGrandDrr) elGrandDrr.innerHTML = `<span class="${getDrrClass(grandDrr)}">${formatDrr(grandDrr)}</span>`;
+      txt(`${m}_stat_percs`,(s.ps>0?Math.round((s.fs/s.ps)*100):0)+"%"); txt(`${m}_stat_percl`,(s.pl>0?Math.round((s.fl/s.pl)*100):0)+"%"); 
+      const pCpl=cplValue(s.ps,s.pl); const fCpl=cplValue(s.fs,s.fl); const elPerc=document.getElementById(`${m}_stat_perccpl`); if(elPerc){ if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; else { const pc=Math.round((fCpl/pCpl)*100); const col=pc<=100?'#30D158':'#FF453A'; elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; } } 
+      let totalDays=0, activeDays=0; monthsData[mI].weeks.forEach((w,wI)=>{ const daysArr=w.days||[]; totalDays+=daysArr.length||7; if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ let act=false; chs.forEach((_,cI)=>{ const dId=`${m}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0||(inputState[`${dId}_leads`]||0)>0) act=true; }); if(act) activeDays++; }); } else { let act=false; chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); if(act) activeDays+=7; } }); const fc=activeDays>0?Math.round((s.fl/activeDays)*totalDays):0; txt(`${m}_stat_forecast`,fCount(fc)); 
+  }
+  function recalcAll(){ monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> (m.channels||[]).forEach((c,cI)=>{ calcDaysToWeek(mI, wI, cI); }))); monthsData.forEach((m,mI)=> m.weeks.forEach((w,wI)=> calcWeekTotal(`m${mI}`, `w${wI}`))); monthsData.forEach((m,mI)=> { calcGrand(`m${mI}`); (m.channels||[]).forEach((c,cI)=> calcChannelGrand(mI, cI)); }); }
+
+  // --- SMM CALC ---
   function getSMMKey(mI, cI, wI, metricName, type) { return `smm_m${mI}_c${cI}_w${wI}_${slugify(metricName)}_${type}`; }
   function getSMMDayKey(mI, cI, wI, dI, metricName) { return `smm_m${mI}_c${cI}_w${wI}_d${dI}_${slugify(metricName)}`; }
   function makeSMMCells(mI, cI, wI, type, metrics){ let html = ''; metrics.forEach(metricName => { const kind = isPercentMetric(metricName) ? 'percent' : 'count'; const key = getSMMKey(mI, cI, wI, metricName, type); const val = inputState[key]; const shown = (kind==='percent') ? formatPercent(val) : formatCount(val); html += `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${key}" data-kind="${kind}" value="${shown}" placeholder="-"></td>`; }); return html; }
   function makeSMMDayCells(mI, cI, wI, dI, metrics){ let html = ''; metrics.forEach(metricName => { const kind = isPercentMetric(metricName) ? 'percent' : 'count'; const key = getSMMDayKey(mI, cI, wI, dI, metricName); const val = inputState[key]; const shown = (kind==='percent') ? formatPercent(val) : formatCount(val); html += `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${key}" data-kind="${kind}" value="${shown}" placeholder="-"></td>`; }); return html; }
   function makeSMMPercCells(mI, cI, wI, metrics){ let html = ''; metrics.forEach(metricName => { const id = `smm_perc_m${mI}_c${cI}_w${wI}_${slugify(metricName)}`; html += `<td><div id="${id}" class="badge badge-neutral">-</div></td>`; }); return html; }
-  function recalcSMM(id) { const parts = id.split('_'); let mI, cI, wI; parts.forEach(p => { if(p.startsWith('m') && !isNaN(parseInt(p.substr(1)))) mI = parseInt(p.substr(1)); if(p.startsWith('c') && !isNaN(parseInt(p.substr(1)))) cI = parseInt(p.substr(1)); if(p.startsWith('w') && !isNaN(parseInt(p.substr(1)))) wI = parseInt(p.substr(1)); }); if (mI !== undefined && cI !== undefined && wI !== undefined) { calcSMMDaysToWeek(mI, cI, wI); calcSMMRowPerc(mI, cI, wI); calcSMMGrand(mI); calcSMMChannelTotal(mI, cI); } }
+  
+  function recalcSMM(id) { 
+      const parts = id.split('_'); let mI, cI, wI; 
+      parts.forEach(p => { if(p.startsWith('m') && !isNaN(parseInt(p.substr(1)))) mI = parseInt(p.substr(1)); if(p.startsWith('c') && !isNaN(parseInt(p.substr(1)))) cI = parseInt(p.substr(1)); if(p.startsWith('w') && !isNaN(parseInt(p.substr(1)))) wI = parseInt(p.substr(1)); }); 
+      if (mI !== undefined && cI !== undefined && wI !== undefined) { calcSMMDaysToWeek(mI, cI, wI); calcSMMRowPerc(mI, cI, wI); calcSMMGrand(mI); calcSMMChannelTotal(mI, cI); } 
+  }
   function calcSMMDaysToWeek(mI, cI, wI) {
     const month = monthsData[mI]; if(!month) return; const days = month.weeks[wI].days || []; const ch = month.smmChannels[cI]; if(!ch) return;
     const reachMet = findReachMetricName(ch.metrics); const errMet = findErrMetricName(ch.metrics); let weightedErrFact = null;
@@ -1507,14 +1491,16 @@ function renderSMM() {
         let totalReactions = 0; let totalReach = 0;
         days.forEach((d, dI) => {
             const rKey = getSMMDayKey(mI, cI, wI, dI, reachMet); const eKey = getSMMDayKey(mI, cI, wI, dI, errMet);
-            const rVal = inputState[rKey]; const eVal = inputState[eKey]; const r = (rVal !== undefined && rVal !== "") ? (+rVal) : 0; const e = (eVal !== undefined && eVal !== "") ? (+eVal) : 0;
+            const r = (+inputState[rKey] || 0); const e = (+inputState[eKey] || 0);
             if (r > 0) { totalReactions += r * (e / 100); totalReach += r; }
         });
         if (totalReach > 0) { weightedErrFact = (totalReactions / totalReach) * 100; }
     }
     ch.metrics.forEach(metricName => {
-        const isPct = isPercentMetric(metricName); const isErr = metricName.toLowerCase().includes('err'); let sum = 0; let cnt = 0;
-        if (isErr && weightedErrFact !== null) { sum = weightedErrFact; } else {
+        const isPct = isPercentMetric(metricName); const isErr = metricName.toLowerCase().includes('err');
+        let sum = 0; let cnt = 0;
+        if (isErr && weightedErrFact !== null) { sum = weightedErrFact; } 
+        else {
             days.forEach((d, dI) => {
                 const key = getSMMDayKey(mI, cI, wI, dI, metricName); const val = inputState[key];
                 if (val !== undefined && val !== null && val !== '') { sum += (+val || 0); cnt += 1; }
@@ -1531,16 +1517,16 @@ function renderSMM() {
     const month = monthsData[mI]; if (!month) return;
     let totalReach = { p: 0, f: 0 }; let totalLeads = { p: 0, f: 0 }; let errCalc = { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 };
     (month.smmChannels || []).forEach((ch, cI) => {
-        ch.metrics.forEach(met => { const l = met.toLowerCase(); const isReach = l.includes('охват') || l.includes('показы') || l.includes('просмотры'); const isLeads = l.includes('лиды'); if (isReach || isLeads) { month.weeks.forEach((w, wI) => { const valP = inputState[getSMMKey(mI, cI, wI, met, 'plan')] || 0; const valF = inputState[getSMMKey(mI, cI, wI, met, 'fact')] || 0; if (isReach) { totalReach.p += valP; totalReach.f += valF; } if (isLeads) { totalLeads.p += valP; totalLeads.f += valF; } }); } });
+        ch.metrics.forEach(met => {
+            const l = met.toLowerCase();
+            const isReach = l.includes('охват') || l.includes('показы') || l.includes('просмотры'); const isLeads = l.includes('лиды');
+            if (isReach || isLeads) { month.weeks.forEach((w, wI) => { const valP = inputState[getSMMKey(mI, cI, wI, met, 'plan')] || 0; const valF = inputState[getSMMKey(mI, cI, wI, met, 'fact')] || 0; if (isReach) { totalReach.p += valP; totalReach.f += valF; } if (isLeads) { totalLeads.p += valP; totalLeads.f += valF; } }); }
+        });
         const reachMet = findReachMetricName(ch.metrics); const errMet = findErrMetricName(ch.metrics);
-        if (reachMet && errMet) {
-            month.weeks.forEach((w, wI) => {
-                const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0; const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0; if (rP > 0) { errCalc.pReactions += rP * (eP / 100); errCalc.pReach += rP; }
-                const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0; const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0; if (rF > 0) { errCalc.fReactions += rF * (eF / 100); errCalc.fReach += rF; }
-            });
-        }
+        if (reachMet && errMet) { month.weeks.forEach((w, wI) => { const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0; const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0; if (rP > 0) { errCalc.pReactions += rP * (eP / 100); errCalc.pReach += rP; } const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0; const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0; if (rF > 0) { errCalc.fReactions += rF * (eF / 100); errCalc.fReach += rF; } }); }
     });
-    txt(`smm_m${mI}_stat_reach_p`, fCount(totalReach.p)); txt(`smm_m${mI}_stat_reach_f`, fCount(totalReach.f)); txt(`smm_m${mI}_stat_leads_p`, fCount(totalLeads.p)); txt(`smm_m${mI}_stat_leads_f`, fCount(totalLeads.f));
+    txt(`smm_m${mI}_stat_reach_p`, fCount(totalReach.p)); txt(`smm_m${mI}_stat_reach_f`, fCount(totalReach.f));
+    txt(`smm_m${mI}_stat_leads_p`, fCount(totalLeads.p)); txt(`smm_m${mI}_stat_leads_f`, fCount(totalLeads.f));
     const wErrP = errCalc.pReach > 0 ? (errCalc.pReactions / errCalc.pReach) * 100 : 0; const wErrF = errCalc.fReach > 0 ? (errCalc.fReactions / errCalc.fReach) * 100 : 0;
     txt(`smm_m${mI}_stat_err_p`, formatPercent(wErrP)); txt(`smm_m${mI}_stat_err_f`, formatPercent(wErrF));
     const timeProgress = getMonthTimeProgress(month.name);
@@ -1548,48 +1534,90 @@ function renderSMM() {
     renderStatus(`smm_m${mI}_stat_reach_perc`, totalReach.p, totalReach.f, false); renderStatus(`smm_m${mI}_stat_leads_perc`, totalLeads.p, totalLeads.f, false); renderStatus(`smm_m${mI}_stat_err_perc`, wErrP, wErrF, true);
   }
   function calcSMMChannelTotal(mI, cI) {
-    const month = monthsData[mI]; if (!month || !month.smmChannels[cI]) return; const channel = month.smmChannels[cI]; const timeProgress = getMonthTimeProgress(month.name);
-    const reachMet = findReachMetricName(channel.metrics); const errMet = findErrMetricName(channel.metrics); let channelErrStats = { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 }; let hasErrPair = false;
-    if (reachMet && errMet) { hasErrPair = true; month.weeks.forEach((w, wI) => { const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0; const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0; const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0; const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0; if(rP > 0) { channelErrStats.pReactions += rP * (eP/100); channelErrStats.pReach += rP; } if(rF > 0) { channelErrStats.fReactions += rF * (eF/100); channelErrStats.fReach += rF; } }); }
-    channel.metrics.forEach(met => { const slug = slugify(met); const isPct = isPercentMetric(met); const isErr = met.toLowerCase().includes('err'); let sumFact = 0; let sumPlan = 0;
-        if (isErr && hasErrPair) { sumPlan = channelErrStats.pReach > 0 ? (channelErrStats.pReactions / channelErrStats.pReach) * 100 : 0; sumFact = channelErrStats.fReach > 0 ? (channelErrStats.fReactions / channelErrStats.fReach) * 100 : 0; } 
-        else { let weeksCount = 0; month.weeks.forEach((w, wI) => { const vP = inputState[getSMMKey(mI, cI, wI, met, 'plan')]; const vF = inputState[getSMMKey(mI, cI, wI, met, 'fact')]; if (vP !== undefined || vF !== undefined) { sumPlan += (vP || 0); sumFact += (vF || 0); weeksCount++; } }); if (isPct && !isErr && weeksCount > 0) { sumPlan /= weeksCount; sumFact /= weeksCount; } }
+    const month = monthsData[mI]; if (!month || !month.smmChannels[cI]) return;
+    const channel = month.smmChannels[cI]; const timeProgress = getMonthTimeProgress(month.name); 
+    const reachMet = findReachMetricName(channel.metrics); const errMet = findErrMetricName(channel.metrics);
+    let channelErrStats = { pReactions: 0, pReach: 0, fReactions: 0, fReach: 0 }; let hasErrPair = false;
+    if (reachMet && errMet) {
+        hasErrPair = true;
+        month.weeks.forEach((w, wI) => {
+            const rP = inputState[getSMMKey(mI, cI, wI, reachMet, 'plan')] || 0; const eP = inputState[getSMMKey(mI, cI, wI, errMet, 'plan')] || 0;
+            const rF = inputState[getSMMKey(mI, cI, wI, reachMet, 'fact')] || 0; const eF = inputState[getSMMKey(mI, cI, wI, errMet, 'fact')] || 0;
+            if(rP > 0) { channelErrStats.pReactions += rP * (eP/100); channelErrStats.pReach += rP; }
+            if(rF > 0) { channelErrStats.fReactions += rF * (eF/100); channelErrStats.fReach += rF; }
+        });
+    }
+    channel.metrics.forEach(met => {
+        const slug = slugify(met); const isPct = isPercentMetric(met); const isErr = met.toLowerCase().includes('err');
+        let sumFact = 0; let sumPlan = 0;
+        if (isErr && hasErrPair) {
+            sumPlan = channelErrStats.pReach > 0 ? (channelErrStats.pReactions / channelErrStats.pReach) * 100 : 0;
+            sumFact = channelErrStats.fReach > 0 ? (channelErrStats.fReactions / channelErrStats.fReach) * 100 : 0;
+        } else {
+            let weeksCount = 0;
+            month.weeks.forEach((w, wI) => {
+                const vP = inputState[getSMMKey(mI, cI, wI, met, 'plan')]; const vF = inputState[getSMMKey(mI, cI, wI, met, 'fact')];
+                if (vP !== undefined || vF !== undefined) { sumPlan += (vP || 0); sumFact += (vF || 0); weeksCount++; }
+            });
+            if (isPct && !isErr && weeksCount > 0) { sumPlan /= weeksCount; sumFact /= weeksCount; }
+        }
         const elF = document.getElementById(`smm_mini_f_m${mI}_c${cI}_${slug}`); const elP = document.getElementById(`smm_mini_p_m${mI}_c${cI}_${slug}`);
         if (elF) elF.innerText = isPct ? formatPercent(sumFact) : formatCount(sumFact); if (elP) elP.innerText = "/ " + (isPct ? formatPercent(sumPlan) : formatCount(sumPlan));
         const elPerc = document.getElementById(`smm_mini_perc_m${mI}_c${cI}_${slug}`);
-        if (elPerc) { if (sumPlan <= 0) { elPerc.innerText = ''; elPerc.className = ''; } else { const completion = sumFact / sumPlan; elPerc.innerText = Math.round(completion * 100) + '%'; elPerc.className = 'mini-perc'; const target = isPct ? 1.0 : timeProgress; const tolerance = 0.1; let status = 'bad'; if (completion >= target) status = 'good'; else if (completion >= (target - tolerance)) status = 'warning'; elPerc.classList.add(status); } }
+        if (elPerc) {
+            if (sumPlan <= 0) { elPerc.innerText = ''; elPerc.className = ''; } 
+            else {
+                const completion = sumFact / sumPlan; elPerc.innerText = Math.round(completion * 100) + '%'; elPerc.className = 'mini-perc';
+                const target = isPct ? 1.0 : timeProgress; const tolerance = 0.1; let status = 'bad';
+                if (completion >= target) status = 'good'; else if (completion >= (target - tolerance)) status = 'warning';
+                elPerc.classList.add(status);
+            }
+        }
     });
   }
   function recalcAllSMM() { monthsData.forEach((m,mI)=> { (m.smmChannels||[]).forEach((ch,cI)=> { m.weeks.forEach((w,wI)=> { calcSMMDaysToWeek(mI,cI,wI); calcSMMRowPerc(mI,cI,wI); }); calcSMMChannelTotal(mI, cI); }); calcSMMGrand(mI); calcSMMMonthTotal(mI); }); }
-  function softUpdateUI() { Object.keys(inputState).forEach(key => { const el = document.getElementById(key); if (el && document.activeElement !== el) { const kind = el.dataset.kind || 'count'; const val = inputState[key]; if (kind === 'money') el.value = formatMoney(val); else if (kind === 'percent') el.value = formatPercent(val); else el.value = formatCount(val); } }); recalcAll(); recalcAllSMM(); renderOverview(); }
+
+  function softUpdateUI() {
+      Object.keys(inputState).forEach(key => {
+          const el = document.getElementById(key);
+          if (el && document.activeElement !== el) {
+              const kind = el.dataset.kind || 'count'; const val = inputState[key];
+              if (kind === 'money') el.value = formatMoney(val); else if (kind === 'percent') el.value = formatPercent(val); else el.value = formatCount(val);
+          }
+      });
+      recalcAll(); recalcAllSMM(); renderOverview();
+  }
+
   function getUiHash(state) { return Object.keys(state).filter(k => k.startsWith('ui_')).sort().map(k => k + ':' + state[k]).join('|'); }
   let lastMonthsJson = ""; let lastUiHash = ""; let dbListenerRef = null;
+
   function initFirebaseListener(callback) {
     if(dbListenerRef) db.ref('kpi_project').off('value', dbListenerRef);
-    dbListenerRef = db.ref('kpi_project').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            const newMonthsData = data.monthsData || [];
-            inputState = data.inputState || {};
-            const newJson = JSON.stringify(newMonthsData);
-            const newUiHash = getUiHash(inputState);
-            const isStructureChanged = newJson !== lastMonthsJson;
-            const isUiChanged = newUiHash !== lastUiHash;
-            monthsData = newMonthsData;
-            lastMonthsJson = newJson;
-            lastUiHash = newUiHash;
-            if (isStructureChanged || isUiChanged) { renderTraffic(); renderSMM(); } else { softUpdateUI(); }
-            renderOverview();
-        } else { if (monthsData.length === 0) addNewMonth(); }
-        const statusText = document.getElementById('statusText'); if(statusText) statusText.innerText = "Онлайн";
-        document.querySelector('.status-dot').style.background = "#10B981"; document.querySelector('.save-status').classList.add('online');
-        if(callback) callback(true);
-    }, (error) => { console.log("Firebase Error:", error.code); if(callback) callback(false); });
+    dbListenerRef = db.ref('kpi_project').on('value', 
+        (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const newMonthsData = data.monthsData || []; inputState = data.inputState || {};
+                const newJson = JSON.stringify(newMonthsData); const newUiHash = getUiHash(inputState);
+                const isStructureChanged = newJson !== lastMonthsJson; const isUiChanged = newUiHash !== lastUiHash;
+                monthsData = newMonthsData; lastMonthsJson = newJson; lastUiHash = newUiHash;
+                if (isStructureChanged || isUiChanged) { renderTraffic(); renderSMM(); } else { softUpdateUI(); }
+                renderOverview();
+            } else { if (monthsData.length === 0) addNewMonth(); }
+            const statusText = document.getElementById('statusText'); if(statusText) statusText.innerText = "Онлайн";
+            document.querySelector('.status-dot').style.background = "#10B981"; document.querySelector('.save-status').classList.add('online');
+            if(callback) callback(true);
+        },
+        (error) => {
+            console.log("Firebase Error:", error.code); if(callback) callback(false);
+        }
+    );
   }
 
   (function init(){
       setupEventListeners();
       window.addEventListener('resize', () => { applyResponsiveTableWidths(); });
+
       auth.onAuthStateChanged((user) => {
           const overlay = document.getElementById('loginOverlay');
           const emailDisplay = document.getElementById('userEmailDisplay');
@@ -1598,6 +1626,7 @@ function renderSMM() {
           const title = document.querySelector('#loginOverlay h2');
           const msg = document.querySelector('#loginOverlay p');
           const loginBtn = document.querySelector('#loginOverlay button:not(#wrongAccLogout)');
+
           if (user) {
               console.log("User logged in:", user.email);
               overlay.style.opacity = '0'; setTimeout(() => { overlay.style.display = 'none'; }, 300);
@@ -1605,10 +1634,9 @@ function renderSMM() {
                   if (!accessGranted) {
                       console.error("Access Denied by Firebase Rules");
                       overlay.style.display = 'flex'; setTimeout(() => { overlay.style.opacity = '1'; }, 10);
-                      title.innerText = "Доступ запрещен"; msg.innerText = "Вашего email нет в белом списке базы данных.";
-                      loginBtn.style.display = 'none'; emailDisplay.innerText = `Вы вошли как: ${user.email}`;
-                      wrongAccBtn.style.display = 'inline-block'; if(statusText) statusText.innerText = "Нет прав";
-                      document.querySelector('.status-dot').style.background = "#FF453A";
+                      title.innerText = "Доступ запрещен"; msg.innerText = "Вашего email нет в белом списке базы данных."; loginBtn.style.display = 'none';
+                      emailDisplay.innerText = `Вы вошли как: ${user.email}`; wrongAccBtn.style.display = 'inline-block';
+                      if(statusText) statusText.innerText = "Нет прав"; document.querySelector('.status-dot').style.background = "#FF453A";
                   }
               });
           } else {
