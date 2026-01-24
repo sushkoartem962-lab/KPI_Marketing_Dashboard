@@ -1722,7 +1722,7 @@ function calcGrand(m){
     const mI=parseInt(m.replace('m','')); 
     const chs=monthsData[mI].channels||[]; 
     
-    // 1. Сбор данных
+    // 1. Сбор данных (Суммируем все каналы)
     monthsData[mI].weeks.forEach((_,wI)=>{ 
         chs.forEach((_,cI)=>{ 
             const id=`${m}_w${wI}_c${cI}`; 
@@ -1739,11 +1739,53 @@ function calcGrand(m){
     txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); 
     txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); 
     
-    // 3. Вывод простых процентов (Расход и Лиды)
-    txt(`${m}_stat_percs`,(s.ps>0?Math.round((s.fs/s.ps)*100):0)+"%"); 
-    txt(`${m}_stat_percl`,(s.pl>0?Math.round((s.fl/s.pl)*100):0)+"%"); 
+    // === ЛОГИКА СВЕТОФОРА (КРАСНЫЙ / ЖЕЛТЫЙ / ЗЕЛЕНЫЙ) ===
     
-    // 4. === ВОССТАНОВЛЕННЫЙ БЛОК: Проценты CPL с цветом ===
+    // Получаем прогресс месяца (от 0.0 до 1.0)
+    const timeProgress = getMonthTimeProgress(monthsData[mI].name);
+
+    // Внутренняя функция для отрисовки цветного процента
+    const setHeaderColor = (elId, plan, fact, invert) => {
+        const el = document.getElementById(elId);
+        if(!el) return;
+        
+        if(plan <= 0) {
+            el.innerHTML = '0%';
+            return;
+        }
+
+        const completion = fact / plan;
+        const pShow = Math.round(completion * 100);
+        const tolerance = 0.1; // Допуск 10% для желтого цвета
+        let status = 'bad';
+
+        if(invert) {
+            // Для РАСХОДА (Меньше = Лучше)
+            // Если потратили меньше или столько же, сколько прошло времени — отлично
+            if (completion <= timeProgress) status = 'good';
+            else if (completion <= (timeProgress + tolerance)) status = 'warning';
+            else status = 'bad';
+        } else {
+            // Для ЛИДОВ (Больше = Лучше)
+            // Если сделали больше или столько же, сколько прошло времени — отлично
+            if (completion >= timeProgress) status = 'good';
+            else if (completion >= (timeProgress - tolerance)) status = 'warning';
+            else status = 'bad';
+        }
+
+        // Подбираем CSS класс (используем существующие классы из вашего CSS)
+        let cls = 'trend-bad';     // Красный (#FF453A)
+        if(status === 'good') cls = 'trend-good';       // Зеленый (#30D158)
+        else if(status === 'warning') cls = 'trend-warning'; // Желтый (#FFD60A)
+        
+        el.innerHTML = `<span class="${cls}">${pShow}%</span>`;
+    };
+
+    // Применяем цвета для Расхода (invert=true) и Лидов (invert=false)
+    setHeaderColor(`${m}_stat_percs`, s.ps, s.fs, true); 
+    setHeaderColor(`${m}_stat_percl`, s.pl, s.fl, false); 
+    
+    // 4. Проценты CPL (Тут логика простая: выше 100% плана — плохо)
     const pCpl=cplValue(s.ps,s.pl); 
     const fCpl=cplValue(s.fs,s.fl); 
     const elPerc=document.getElementById(`${m}_stat_perccpl`); 
@@ -1751,26 +1793,27 @@ function calcGrand(m){
         if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; 
         else { 
             const pc=Math.round((fCpl/pCpl)*100); 
-            // Если CPL выше плана (больше 100%) - это плохо (красный), если ниже - хорошо (зеленый)
+            // CPL: Меньше 100% = Хорошо (зеленый), Больше = Плохо (красный). Желтого тут обычно нет.
             const col=pc<=100?'#30D158':'#FF453A'; 
             elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; 
         } 
     } 
     
-    // 5. Новые метрики: Выручка и ДРР
+    // 5. Выручка и ДРР
     txt(`${m}_stat_rev`, fRub(s.fRev));
     
     const elGrandDrr = document.getElementById(`${m}_stat_drr`);
     if(elGrandDrr) {
         if(s.fRev > 0) {
             const drr = (s.fs / s.fRev) * 100;
+            // Используем ваш глобальный хелпер для ДРР
             elGrandDrr.innerHTML = `<span class="${getDrrClass(drr)}" style="font-size:18px">${NF.format(drr)}%</span>`;
         } else {
             elGrandDrr.innerText = "-";
         }
     }
     
-    // 6. Прогноз лидов
+    // 6. Прогноз
     let totalDays=0, activeDays=0; 
     monthsData[mI].weeks.forEach((w,wI)=>{ 
         const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
