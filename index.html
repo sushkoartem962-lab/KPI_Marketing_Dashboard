@@ -1735,46 +1735,59 @@ function calcChannelGrand(mI,cI){
       let totalDays=0, activeDays=0; 
       weeks.forEach((w,wI)=>{ 
           const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
-          if(daysArr.length>0){ 
-              daysArr.forEach((d,dI)=>{ 
-                  const dId=`m${mI}_w${wI}_d${dI}_c${cI}`; 
-                  if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; 
-              }); 
-          } else { 
-              const wfs=inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0; 
-              const wfl=inputState[`m${mI}_w${wI}_c${cI}_fact_leads`]||0; 
-              if(wfs>0||wfl>0) activeDays+=7; 
-          } 
+          if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ const dId=`m${mI}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0 || (inputState[`${dId}_leads`]||0)>0) activeDays++; }); } 
+          else { const wfs=inputState[`m${mI}_w${wI}_c${cI}_fact_spend`]||0; const wfl=inputState[`m${mI}_w${wI}_c${cI}_fact_leads`]||0; if(wfs>0||wfl>0) activeDays+=7; } 
       }); 
       const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
       
-      // Расход и Лиды
       txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); 
       txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
       txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); 
       txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
       
-      // === ВОССТАНОВЛЕННЫЙ РАСЧЕТ CPL ===
-      const pcpl = cplValue(ps,pl);
-      const fcpl = cplValue(fs,fl);
+      const pcpl = cplValue(ps,pl); const fcpl = cplValue(fs,fl);
       txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); 
       txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
       
-      // Выручка и ДРР
-      txt(`m${mI}_c${cI}_mini_rev`, fRub(fRev));
+      // === ВЫРУЧКА И ДРР (СИНХРОНИЗАЦИЯ ЦВЕТА) ===
+      
+      // Считаем класс цвета
+      let drrClass = '';
+      let drrVal = 0;
+      if (fRev > 0) {
+          drrVal = (fs / fRev) * 100;
+          drrClass = getDrrClass(drrVal);
+      }
+
+      // Обновляем чип Выручки
+      const elRev = document.getElementById(`m${mI}_c${cI}_mini_rev`);
+      if(elRev) {
+          // Ищем родителя (span), чтобы убрать жесткий стиль style="color:..."
+          // Или просто перезаписываем HTML внутри strong
+          // В renderTraffic структура: <strong style="color:#30D158"><span id="...">...</span></strong>
+          // Нам нужно достучаться до strong, который является родителем elRev
+          
+          elRev.innerText = fRub(fRev);
+          
+          // Хак: поднимаемся к родителю (strong) и меняем его цвет/класс
+          if(elRev.parentElement && elRev.parentElement.tagName === 'STRONG') {
+              elRev.parentElement.style.color = ''; // Сброс
+              elRev.parentElement.className = ''; // Сброс
+              if(drrClass) elRev.parentElement.classList.add(drrClass);
+          }
+      }
+      
+      // Обновляем чип ДРР
       const elMiniDrr = document.getElementById(`m${mI}_c${cI}_mini_drr`);
       if(elMiniDrr) {
           if (fRev > 0) {
-              const drr = (fs / fRev) * 100;
-              elMiniDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NF.format(drr)}%</span>`;
+              elMiniDrr.innerHTML = `<span class="${drrClass}">${NF.format(drrVal)}%</span>`;
           } else {
               elMiniDrr.innerText = "-";
           }
       }
 
-      // Отрисовка баджей (Светофор)
       const timeProgress = getMonthTimeProgress(monthsData[mI].name);
-      
       const setMiniBadge = (id, plan, fact, invert, isRate) => {
          const el = document.getElementById(id); if(!el) return;
          if(plan <= 0) { el.className=''; el.innerText=''; return; }
@@ -1788,14 +1801,14 @@ function calcChannelGrand(mI,cI){
 
       setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false);    
       setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false); 
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); // Добавили CPL
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true);
 }
 function calcGrand(m){ 
     let s={ps:0,pl:0,fs:0,fl:0, fRev:0}; 
     const mI=parseInt(m.replace('m','')); 
     const chs=monthsData[mI].channels||[]; 
     
-    // 1. Сбор данных (Суммируем все каналы)
+    // 1. Сбор данных
     monthsData[mI].weeks.forEach((_,wI)=>{ 
         chs.forEach((_,cI)=>{ 
             const id=`${m}_w${wI}_c${cI}`; 
@@ -1807,80 +1820,59 @@ function calcGrand(m){
         }); 
     }); 
     
-    // 2. Вывод основных цифр (Факт / План)
+    // 2. Вывод основных цифр
     txt(`${m}_stat_ps`,fRub(s.ps)); txt(`${m}_stat_fs`,fRub(s.fs)); 
     txt(`${m}_stat_pl`,fCount(s.pl)); txt(`${m}_stat_fl`,fCount(s.fl)); 
     txt(`${m}_stat_fcpl`,fRub(cplValue(s.fs,s.fl))); txt(`${m}_stat_pcpl`,fRub(cplValue(s.ps,s.pl))); 
     
-    // === ЛОГИКА СВЕТОФОРА (КРАСНЫЙ / ЖЕЛТЫЙ / ЗЕЛЕНЫЙ) ===
-    
-    // Получаем прогресс месяца (от 0.0 до 1.0)
+    // 3. Светофор для Расхода и Лидов
     const timeProgress = getMonthTimeProgress(monthsData[mI].name);
-
-    // Внутренняя функция для отрисовки цветного процента
     const setHeaderColor = (elId, plan, fact, invert) => {
-        const el = document.getElementById(elId);
-        if(!el) return;
-        
-        if(plan <= 0) {
-            el.innerHTML = '0%';
-            return;
-        }
-
-        const completion = fact / plan;
-        const pShow = Math.round(completion * 100);
-        const tolerance = 0.1; // Допуск 10% для желтого цвета
-        let status = 'bad';
-
-        if(invert) {
-            // Для РАСХОДА (Меньше = Лучше)
-            // Если потратили меньше или столько же, сколько прошло времени — отлично
-            if (completion <= timeProgress) status = 'good';
-            else if (completion <= (timeProgress + tolerance)) status = 'warning';
-            else status = 'bad';
-        } else {
-            // Для ЛИДОВ (Больше = Лучше)
-            // Если сделали больше или столько же, сколько прошло времени — отлично
-            if (completion >= timeProgress) status = 'good';
-            else if (completion >= (timeProgress - tolerance)) status = 'warning';
-            else status = 'bad';
-        }
-
-        // Подбираем CSS класс (используем существующие классы из вашего CSS)
-        let cls = 'trend-bad';     // Красный (#FF453A)
-        if(status === 'good') cls = 'trend-good';       // Зеленый (#30D158)
-        else if(status === 'warning') cls = 'trend-warning'; // Желтый (#FFD60A)
-        
+        const el = document.getElementById(elId); if(!el) return;
+        if(plan <= 0) { el.innerHTML = '0%'; return; }
+        const completion = fact / plan; const pShow = Math.round(completion * 100);
+        const tolerance = 0.1; let status = 'bad';
+        if(invert) { if (completion <= timeProgress) status = 'good'; else if (completion <= (timeProgress + tolerance)) status = 'warning'; else status = 'bad'; } 
+        else { if (completion >= timeProgress) status = 'good'; else if (completion >= (timeProgress - tolerance)) status = 'warning'; else status = 'bad'; }
+        let cls = 'trend-bad'; if(status === 'good') cls = 'trend-good'; else if(status === 'warning') cls = 'trend-warning';
         el.innerHTML = `<span class="${cls}">${pShow}%</span>`;
     };
-
-    // Применяем цвета для Расхода (invert=true) и Лидов (invert=false)
     setHeaderColor(`${m}_stat_percs`, s.ps, s.fs, true); 
     setHeaderColor(`${m}_stat_percl`, s.pl, s.fl, false); 
     
-    // 4. Проценты CPL (Тут логика простая: выше 100% плана — плохо)
-    const pCpl=cplValue(s.ps,s.pl); 
-    const fCpl=cplValue(s.fs,s.fl); 
+    // 4. Проценты CPL
+    const pCpl=cplValue(s.ps,s.pl); const fCpl=cplValue(s.fs,s.fl); 
     const elPerc=document.getElementById(`${m}_stat_perccpl`); 
     if(elPerc){ 
         if(pCpl===0) elPerc.innerHTML='<span style="opacity:0.3">-</span>'; 
-        else { 
-            const pc=Math.round((fCpl/pCpl)*100); 
-            // CPL: Меньше 100% = Хорошо (зеленый), Больше = Плохо (красный). Желтого тут обычно нет.
-            const col=pc<=100?'#30D158':'#FF453A'; 
-            elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; 
-        } 
+        else { const pc=Math.round((fCpl/pCpl)*100); const col=pc<=100?'#30D158':'#FF453A'; elPerc.innerHTML=`<span style="color:${col};font-weight:700">${pc}%</span>`; } 
     } 
     
-    // 5. Выручка и ДРР
-    txt(`${m}_stat_rev`, fRub(s.fRev));
+    // 5. ВЫРУЧКА И ДРР (СИНХРОНИЗАЦИЯ ЦВЕТА)
     
+    // Сначала считаем ДРР и определяем класс цвета
+    let drrVal = 0;
+    let drrClass = '';
+    
+    if(s.fRev > 0) {
+        drrVal = (s.fs / s.fRev) * 100;
+        drrClass = getDrrClass(drrVal); // Получаем класс (зеленый/желтый/красный)
+    }
+
+    // Обновляем Выручку
+    const elRev = document.getElementById(`${m}_stat_rev`);
+    if(elRev) {
+        elRev.innerText = fRub(s.fRev);
+        elRev.style.color = ''; // Сбрасываем жесткий цвет, заданный в HTML
+        elRev.className = 'stat-val'; // Сбрасываем старые классы
+        if(drrClass) elRev.classList.add(drrClass); // Применяем цвет ДРР к Выручке
+    }
+    
+    // Обновляем ДРР
     const elGrandDrr = document.getElementById(`${m}_stat_drr`);
     if(elGrandDrr) {
         if(s.fRev > 0) {
-            const drr = (s.fs / s.fRev) * 100;
-            // Используем ваш глобальный хелпер для ДРР
-            elGrandDrr.innerHTML = `<span class="${getDrrClass(drr)}" style="font-size:18px">${NF.format(drr)}%</span>`;
+            elGrandDrr.innerHTML = `<span class="${drrClass}" style="font-size:18px">${NF.format(drrVal)}%</span>`;
         } else {
             elGrandDrr.innerText = "-";
         }
@@ -1890,20 +1882,8 @@ function calcGrand(m){
     let totalDays=0, activeDays=0; 
     monthsData[mI].weeks.forEach((w,wI)=>{ 
         const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
-        if(daysArr.length>0){ 
-            daysArr.forEach((d,dI)=>{ 
-                let act=false; 
-                chs.forEach((_,cI)=>{ 
-                    const dId=`${m}_w${wI}_d${dI}_c${cI}`; 
-                    if((inputState[`${dId}_spend`]||0)>0||(inputState[`${dId}_leads`]||0)>0) act=true; 
-                }); 
-                if(act) activeDays++; 
-            }); 
-        } else { 
-            let act=false; 
-            chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); 
-            if(act) activeDays+=7; 
-        } 
+        if(daysArr.length>0){ daysArr.forEach((d,dI)=>{ let act=false; chs.forEach((_,cI)=>{ const dId=`${m}_w${wI}_d${dI}_c${cI}`; if((inputState[`${dId}_spend`]||0)>0||(inputState[`${dId}_leads`]||0)>0) act=true; }); if(act) activeDays++; }); } 
+        else { let act=false; chs.forEach((_,cI)=>{ if((inputState[`${m}_w${wI}_c${cI}_fact_spend`]||0)>0) act=true; }); if(act) activeDays+=7; } 
     }); 
     const fc=activeDays>0?Math.round((s.fl/activeDays)*totalDays):0; 
     txt(`${m}_stat_forecast`,fCount(fc)); 
