@@ -1060,8 +1060,8 @@ function renderTraffic() {
          <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
          <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
          <div class="stat-box"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
-         <div class="stat-box"><div class="stat-label">Выручка (Факт)</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
-         <div class="stat-box"><div class="stat-label">ДРР (Общий)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
+         <div class="stat-box"><div class="stat-label">Выручка</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
+         <div class="stat-box"><div class="stat-label">ДРР</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
          <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов A+B</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
       </div></div>
       
@@ -1082,11 +1082,11 @@ function renderTraffic() {
             <div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_drr">-</span></strong></div>
         </div></div>
         
-        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">₽ Финансы</button>
+        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">Финансы</button>
         </div>
         
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
+        <th>${isFin ? 'Выручка' : 'Лиды A+B'}</th>
         <th>${isFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
 
@@ -1130,10 +1130,10 @@ function renderTraffic() {
       html += `<div class="channel-card total-card">
         <div class="channel-header">
             <div class="channel-name">ВСЕГО</div>
-            <button class="kpi-btn ${totalFinBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleTotalFinanceMode(${mIndex})">₽ Финансы</button>
+            <button class="kpi-btn ${totalFinBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleTotalFinanceMode(${mIndex})">Финансы</button>
         </div>
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isTotalFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
+        <th>${isTotalFin ? 'Выручка' : 'Лиды A+B'}</th>
         <th>${isTotalFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
         
