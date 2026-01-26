@@ -1048,11 +1048,11 @@ function findErrMetricName(metrics) {
   // --- TRAFFIC RENDER (PATCHED WITH FINANCE & DRR) ---
 // --- TRAFFIC RENDER (FIXED HEADER: ALL 6 METRICS) ---
 // --- TRAFFIC RENDER (FULL UPDATE: CHANNELS + TOTAL FINANCE) ---
+// --- TRAFFIC RENDER (FIXED: RETURNED CPL TO CHANNEL HEADER) ---
 function renderTraffic() {
     _smartRenderList('trafficContainer', monthsData, 'tr', (month, mIndex) => {
       const chs = month.channels || [];
       
-      // 1. Шапка месяца
       let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
       <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="addTrafficChannel(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
       
@@ -1060,14 +1060,13 @@ function renderTraffic() {
          <div class="stat-box"><div class="stat-label">Расход (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fs">-</span> / <span id="m${mIndex}_stat_ps" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percs">0%</div></div>
          <div class="stat-box"><div class="stat-label">Лиды A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_percl">0%</div></div>
          <div class="stat-box"><div class="stat-label">CPL A+B (Факт/План)</div><div class="stat-val"><span id="m${mIndex}_stat_fcpl">-</span> / <span id="m${mIndex}_stat_pcpl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="m${mIndex}_stat_perccpl">-</div></div>
-         <div class="stat-box"><div class="stat-label">Выручка</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
+         <div class="stat-box"><div class="stat-label">Выручка (Факт)</div><div class="stat-val" id="m${mIndex}_stat_rev" style="color:#30D158">-</div></div>
          <div class="stat-box"><div class="stat-label">ДРР (Общий)</div><div class="stat-val" id="m${mIndex}_stat_drr">-</div></div>
          <div class="stat-box forecast"><div class="stat-label">Прогноз Лидов A+B</div><div class="stat-val" id="m${mIndex}_stat_forecast">-</div><div class="stat-sub">Конец месяца</div></div>
       </div></div>
       
       <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
 
-      // Генерация карточек каналов (без изменений логики)
       chs.forEach((ch, cI) => {
         const isFin = !!inputState[`ui_fin_mode_m${mIndex}_c${cI}`];
         const finBtnClass = isFin ? 'finance-active' : '';
@@ -1076,13 +1075,18 @@ function renderTraffic() {
         <div class="mini-grid">
             <div class="mini-chip">Расход: <strong><span id="m${mIndex}_c${cI}_mini_fs">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_ps">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_s"></span></div>
             <div class="mini-chip">Лиды: <strong class="accent"><span id="m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_l"></span></div>
+            
+            <div class="mini-chip">CPL: <strong><span id="m${mIndex}_c${cI}_mini_fcpl">-</span></strong><span class="mini-plan" id="m${mIndex}_c${cI}_mini_pcpl">/ -</span><span id="m${mIndex}_c${cI}_mini_perc_cpl"></span></div>
+            
             <div class="mini-chip">Выручка: <strong style="color:#30D158"><span id="m${mIndex}_c${cI}_mini_rev">-</span></strong></div>
             <div class="mini-chip">ДРР: <strong><span id="m${mIndex}_c${cI}_mini_drr">-</span></strong></div>
         </div></div>
-        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">Финансы</button>
+        
+        <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleFinanceMode(${mIndex}, ${cI})">₽ Финансы</button>
         </div>
+        
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isFin ? 'Выручка' : 'Лиды A+B'}</th>
+        <th>${isFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
         <th>${isFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
 
@@ -1120,17 +1124,16 @@ function renderTraffic() {
         html += `</tbody></table></div></div>`;
       });
       
-      // === ОБНОВЛЕННЫЙ БЛОК TOTAL (ВСЕГО) ===
       const isTotalFin = !!inputState[`ui_fin_mode_total_m${mIndex}`];
       const totalFinBtnClass = isTotalFin ? 'finance-active' : '';
 
       html += `<div class="channel-card total-card">
         <div class="channel-header">
             <div class="channel-name">ВСЕГО</div>
-            <button class="kpi-btn ${totalFinBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleTotalFinanceMode(${mIndex})">Финансы</button>
+            <button class="kpi-btn ${totalFinBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleTotalFinanceMode(${mIndex})">₽ Финансы</button>
         </div>
         <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Расход</th>
-        <th>${isTotalFin ? 'Выручка' : 'Лиды A+B'}</th>
+        <th>${isTotalFin ? 'Выручка (Факт)' : 'Лиды A+B'}</th>
         <th>${isTotalFin ? 'ДРР' : 'CPL A+B'}</th>
         </tr></thead><tbody>`;
         
@@ -1715,7 +1718,8 @@ function calcWeekTotal(m,w){
         }
     }
 }
-    function calcChannelGrand(mI,cI){ 
+    // --- CALC CHANNEL GRAND (FIXED: RETURNED CPL LOGIC) ---
+function calcChannelGrand(mI,cI){ 
       let ps=0,pl=0,fs=0,fl=0, fRev=0; 
       const weeks=monthsData[mI].weeks; 
       
@@ -1725,10 +1729,9 @@ function calcWeekTotal(m,w){
           pl+=inputState[`${id}_plan_leads`]||0; 
           fs+=inputState[`${id}_fact_spend`]||0; 
           fl+=inputState[`${id}_fact_leads`]||0; 
-          fRev+=inputState[`${id}_fact_revenue`]||0; // Суммируем выручку
+          fRev+=inputState[`${id}_fact_revenue`]||0; 
       }); 
       
-      // Прогноз лидов (старый код)
       let totalDays=0, activeDays=0; 
       weeks.forEach((w,wI)=>{ 
           const daysArr=w.days||[]; totalDays+=daysArr.length||7; 
@@ -1745,15 +1748,20 @@ function calcWeekTotal(m,w){
       }); 
       const fc=activeDays>0?Math.round((fl/activeDays)*totalDays):0; 
       
-      // Вывод стандартных цифр
+      // Расход и Лиды
       txt(`m${mI}_c${cI}_mini_fs`,fRub(fs)); 
       txt(`m${mI}_c${cI}_mini_ps`,"/ " + fRub(ps)); 
       txt(`m${mI}_c${cI}_mini_fl`,fCount(fl)); 
       txt(`m${mI}_c${cI}_mini_pl`,"/ " + fCount(pl)); 
       
-      // Вывод НОВЫХ цифр (Выручка и ДРР) в шапку канала
-      txt(`m${mI}_c${cI}_mini_rev`, fRub(fRev));
+      // === ВОССТАНОВЛЕННЫЙ РАСЧЕТ CPL ===
+      const pcpl = cplValue(ps,pl);
+      const fcpl = cplValue(fs,fl);
+      txt(`m${mI}_c${cI}_mini_fcpl`,fRub(fcpl)); 
+      txt(`m${mI}_c${cI}_mini_pcpl`,"/ " + fRub(pcpl)); 
       
+      // Выручка и ДРР
+      txt(`m${mI}_c${cI}_mini_rev`, fRub(fRev));
       const elMiniDrr = document.getElementById(`m${mI}_c${cI}_mini_drr`);
       if(elMiniDrr) {
           if (fRev > 0) {
@@ -1764,10 +1772,9 @@ function calcWeekTotal(m,w){
           }
       }
 
-      // Цвета для мини-чипов (старый код)
+      // Отрисовка баджей (Светофор)
       const timeProgress = getMonthTimeProgress(monthsData[mI].name);
       
-      // Хелпер для мини-баджей (вставляем сюда же, чтобы не дублировать код)
       const setMiniBadge = (id, plan, fact, invert, isRate) => {
          const el = document.getElementById(id); if(!el) return;
          if(plan <= 0) { el.className=''; el.innerText=''; return; }
@@ -1780,7 +1787,8 @@ function calcWeekTotal(m,w){
       };
 
       setMiniBadge(`m${mI}_c${cI}_mini_perc_s`, ps, fs, true, false);    
-      setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false);   
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_l`, pl, fl, false, false); 
+      setMiniBadge(`m${mI}_c${cI}_mini_perc_cpl`, pcpl, fcpl, true, true); // Добавили CPL
 }
 function calcGrand(m){ 
     let s={ps:0,pl:0,fs:0,fl:0, fRev:0}; 
