@@ -1579,42 +1579,46 @@ function renderSMM() {
         const elRev = document.getElementById(`${dayId}_revenue`);
         const elDrr = document.getElementById(`${dayId}_drr`);
 
-       // Логика подсветок (Светофор по дням: только Лиды и CPL)
+      // Логика подсветок (Светофор по дням: Лиды и CPL напрямую без CSS)
         if (elS && elL) {
-            // 1. Сбрасываем все классы (Расход больше не красим)
+            // 1. Сбрасываем старые классы (расход больше вообще не красим)
             elS.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
             elL.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
-
+            elS.style.color = ''; // Чистим цвет расхода
+            
             // 2. Светофор для Лидов (Больше = Лучше)
-            // Условие valS > 0 нужно, чтобы пустые дни (где еще не было открута) не горели красным
+            // План на день = План на неделю / 7 (в твоем случае 95 / 7 = 13.57)
             if (planLeads > 0 && valS > 0) { 
                 if (valL >= dayTargetL) {
-                    elL.classList.add('smart-input-good');      // Зеленый: выполнили или перевыполнили норму
-                } else if (valL >= dayTargetL * 0.9) {
-                    elL.classList.add('smart-input-warning');   // Желтый: просадка не больше 10%
+                    elL.style.setProperty('color', '#30D158', 'important');      // Зеленый (выполнили)
+                } else if (valL >= dayTargetL * 0.8) {
+                    elL.style.setProperty('color', '#FFD60A', 'important');      // Желтый (просадка до 20%)
                 } else {
-                    elL.classList.add('smart-input-bad');       // Красный: просадка больше 10%
+                    elL.style.setProperty('color', '#FF453A', 'important');      // Красный (просадка > 20%)
                 }
+            } else {
+                elL.style.color = ''; // Сброс
             }
 
             // 3. Светофор для CPL (Меньше = Лучше)
+            // Целевой CPL = План Расход / План Лиды
             if (elC) {
                 if (valL > 0) {
                     const dc = Math.round(valS / valL);
-                    let cls = "day-cpl-neutral";
+                    let color = "var(--tx-main)"; // Дефолтный цвет
                     if (targetCPL > 0) {
                         if (dc <= targetCPL) {
-                            cls = "day-cpl-good";               // Зеленый: CPL в рамках плана или дешевле
-                        } else if (dc <= targetCPL * 1.1) {
-                            cls = "day-cpl-warning";            // Желтый: CPL дороже плана, но не более чем на 10%
+                            color = "#30D158"; // Зеленый: CPL в норме или дешевле
+                        } else if (dc <= targetCPL * 1.2) {
+                            color = "#FFD60A"; // Желтый: CPL дороже плана, но не больше чем на 20%
                         } else {
-                            cls = "day-cpl-bad";                // Красный: CPL дороже плана больше чем на 10%
+                            color = "#FF453A"; // Красный: CPL дороже плана > 20%
                         }
                     }
-                    elC.innerHTML = `<span class="${cls}">${formatMoney(dc)}</span>`;
+                    elC.innerHTML = `<span style="color:${color}!important; font-weight:800;">${formatMoney(dc)}</span>`;
                 } else {
-                    // Если деньги потрачены (valS > 0), а лидов 0 — это красный алерт
-                    elC.innerHTML = (valS > 0) ? `<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>` : `-`;
+                    // Если расход есть, а лидов 0 — это жесткий красный
+                    elC.innerHTML = (valS > 0) ? `<span style="color:#FF453A!important; font-weight:800; font-size:10px">0 лидов</span>` : `-`;
                 }
             }
         }
