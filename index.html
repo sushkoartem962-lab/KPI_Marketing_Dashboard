@@ -1487,12 +1487,12 @@ function renderSMM() {
     const weekObj = month.weeks[wI]; if (typeof weekObj !== 'object' || !weekObj.days) return;
     const days = weekObj.days; const rowId = `m${mI}_w${wI}`;
     
-    // Получаем плановые показатели недели
+    // Получаем план недели для расчёта целевых показателей дня
     const ps = inputState[rowId + '_c' + cI + '_plan_spend'] || 0;
     const pl = inputState[rowId + '_c' + cI + '_plan_leads'] || 0;
     const planCpl = (ps > 0 && pl > 0) ? ps / pl : 0;
     const dayLeadTarget = (pl > 0) ? pl / days.length : 0;
-    const tolerance = 0.2; // 20% толерантность
+    const tolerance = 0.2; // 20%
 
     let sumS = 0, sumL = 0, sumRev = 0;
     
@@ -1507,45 +1507,49 @@ function renderSMM() {
         const elL = document.getElementById(`${dayId}_leads`); 
         const elC = document.getElementById(`${dayId}_cpl`);
 
-        // Функция для определения стиля "чипа"
-        const getChipStyle = (isGood, isWarning) => {
-            let bg = 'transparent', color = 'inherit';
-            if (isGood) { bg = 'rgba(48, 209, 88, 0.15)'; color = '#30D158'; }
-            else if (isWarning) { bg = 'rgba(255, 214, 10, 0.15)'; color = '#FFD60A'; }
-            else { bg = 'rgba(255, 69, 58, 0.15)'; color = '#FF453A'; }
-            return `background:${bg}; color:${color}; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-block; min-width: 40px;`;
+        // Хелпер для получения класса статуса (светофор)
+        const getStatus = (val, target, invert = false) => {
+            if (!target || target <= 0 || !val) return '';
+            const ratio = val / target;
+            if (invert) { // Для CPL (меньше — лучше)
+                if (ratio <= 1) return 'badge-good';
+                if (ratio <= 1 + tolerance) return 'badge-warning';
+                return 'badge-bad';
+            } else { // Для Лидов (больше — лучше)
+                if (ratio >= 1) return 'badge-good';
+                if (ratio >= 1 - tolerance) return 'badge-warning';
+                return 'badge-bad';
+            }
         };
 
-        // Логика светофора для Лидов (больше — лучше)
+        // 1. Оформляем инпут Лидов
         if (elL) {
-            if (valL > 0 && dayLeadTarget > 0) {
-                const isGood = valL >= dayLeadTarget;
-                const isWarning = !isGood && valL >= dayLeadTarget * (1 - tolerance);
-                elL.style.cssText = getChipStyle(isGood, isWarning);
+            const statusClass = getStatus(valL, dayLeadTarget, false);
+            // Сбрасываем и задаем стили аккуратной плашки
+            elL.className = 'cell-input ' + statusClass;
+            elL.style.borderRadius = '6px';
+            elL.style.width = '40px'; // Фиксируем ширину для аккуратности
+            elL.style.margin = '0 auto';
+            elL.style.display = 'block';
+            if (statusClass) {
+                elL.style.fontWeight = '700';
             } else {
-                elL.style.cssText = ''; 
+                elL.style.fontWeight = ''; elL.style.background = '';
             }
         }
 
-        // Логика светофора для CPL (меньше — лучше)
+        // 2. Оформляем ячейку CPL (как в итогах недели)
         if (elC) {
             if (valL > 0) {
                 const dc = Math.round(valS / valL);
-                let innerHTML = '';
-                if (planCpl > 0) {
-                    const isGood = dc <= planCpl;
-                    const isWarning = !isGood && dc <= planCpl * (1 + tolerance);
-                    innerHTML = `<span style="${getChipStyle(isGood, isWarning)}">${formatMoney(dc)}</span>`;
-                } else {
-                    innerHTML = `<span style="font-weight:800;">${formatMoney(dc)}</span>`;
-                }
-                elC.innerHTML = innerHTML;
+                const statusClass = getStatus(dc, planCpl, true);
+                elC.innerHTML = `<span class="badge ${statusClass || 'badge-neutral'}">${formatMoney(dc)}</span>`;
             } else {
-                elC.innerHTML = (valS > 0) ? `<span style="color:#FF453A; font-size:10px; font-weight:800;">0 лидов</span>` : `-`;
+                elC.innerHTML = (valS > 0) ? `<span class="badge badge-bad" style="font-size:9px">0 лидов</span>` : `-`;
             }
         }
         
-        // Рендер ДРР (без изменений)
+        // 3. ДРР (без изменений)
         const elDrr = document.getElementById(`${dayId}_drr`);
         if(elDrr && valRev > 0) {
             const drr = (valS / valRev) * 100;
@@ -1553,14 +1557,13 @@ function renderSMM() {
         }
     });
     
-    // Обновляем состояние итогов (код из оригинала)
+    // Итоги недели (код из оригинала)
     inputState[`${rowId}_c${cI}_fact_spend`] = sumS; 
     inputState[`${rowId}_c${cI}_fact_leads`] = sumL;
     inputState[`${rowId}_c${cI}_fact_revenue`] = sumRev; 
     
     const wInpS = document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value = formatMoney(sumS);
     const wInpL = document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value = formatCount(sumL);
-    const wInpRev = document.getElementById(`${rowId}_c${cI}_fact_rev`); if(wInpRev) wInpRev.value = formatMoney(sumRev);
 }
 function makeCells(rowId,cI,type, isFin){ 
     const id=`${rowId}_c${cI}`; 
