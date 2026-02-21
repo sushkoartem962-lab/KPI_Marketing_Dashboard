@@ -1482,16 +1482,17 @@ function renderSMM() {
     if(mI>=0&&wI>=0&&cI>=0) { calcRow(`m${mI}_w${wI}_c${cI}`); calcWeekTotal(`m${mI}`,`w${wI}`); calcChannelGrand(mI,cI); calcGrand(`m${mI}`); }
   }
   
-  function calcDaysToWeek(mI, wI, cI) {
+ function calcDaysToWeek(mI, wI, cI) {
     const month = monthsData[mI]; if (!month) return;
     const weekObj = month.weeks[wI]; if (typeof weekObj !== 'object' || !weekObj.days) return;
     const days = weekObj.days; const rowId = `m${mI}_w${wI}`;
     
-    // Получаем план на неделю для сравнения
+    // Получаем плановые показатели недели
     const ps = inputState[rowId + '_c' + cI + '_plan_spend'] || 0;
     const pl = inputState[rowId + '_c' + cI + '_plan_leads'] || 0;
     const planCpl = (ps > 0 && pl > 0) ? ps / pl : 0;
     const dayLeadTarget = (pl > 0) ? pl / days.length : 0;
+    const tolerance = 0.2; // 20% толерантность
 
     let sumS = 0, sumL = 0, sumRev = 0;
     
@@ -1503,48 +1504,56 @@ function renderSMM() {
         
         sumS += valS; sumL += valL; sumRev += valRev;
         
-        const elS = document.getElementById(`${dayId}_spend`); 
         const elL = document.getElementById(`${dayId}_leads`); 
         const elC = document.getElementById(`${dayId}_cpl`);
-        const elDrr = document.getElementById(`${dayId}_drr`);
 
-        // Подсветка Лидов
+        // Функция для определения стиля "чипа"
+        const getChipStyle = (isGood, isWarning) => {
+            let bg = 'transparent', color = 'inherit';
+            if (isGood) { bg = 'rgba(48, 209, 88, 0.15)'; color = '#30D158'; }
+            else if (isWarning) { bg = 'rgba(255, 214, 10, 0.15)'; color = '#FFD60A'; }
+            else { bg = 'rgba(255, 69, 58, 0.15)'; color = '#FF453A'; }
+            return `background:${bg}; color:${color}; padding: 2px 8px; border-radius: 6px; font-weight: 700; display: inline-block; min-width: 40px;`;
+        };
+
+        // Логика светофора для Лидов (больше — лучше)
         if (elL) {
             if (valL > 0 && dayLeadTarget > 0) {
-                elL.style.backgroundColor = valL >= dayLeadTarget ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.1)';
-                elL.style.color = valL >= dayLeadTarget ? '#30D158' : '#FF453A';
+                const isGood = valL >= dayLeadTarget;
+                const isWarning = !isGood && valL >= dayLeadTarget * (1 - tolerance);
+                elL.style.cssText = getChipStyle(isGood, isWarning);
             } else {
-                elL.style.backgroundColor = ''; elL.style.color = '';
+                elL.style.cssText = ''; 
             }
         }
 
-        // Расчет и подсветка CPL
+        // Логика светофора для CPL (меньше — лучше)
         if (elC) {
             if (valL > 0) {
                 const dc = Math.round(valS / valL);
-                let color = ''; let bg = '';
+                let innerHTML = '';
                 if (planCpl > 0) {
-                    color = dc <= planCpl ? '#30D158' : '#FF453A';
-                    bg = dc <= planCpl ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.1)';
+                    const isGood = dc <= planCpl;
+                    const isWarning = !isGood && dc <= planCpl * (1 + tolerance);
+                    innerHTML = `<span style="${getChipStyle(isGood, isWarning)}">${formatMoney(dc)}</span>`;
+                } else {
+                    innerHTML = `<span style="font-weight:800;">${formatMoney(dc)}</span>`;
                 }
-                elC.innerHTML = `<span style="font-weight:800; color:${color}">${formatMoney(dc)}</span>`;
-                elC.style.backgroundColor = bg;
+                elC.innerHTML = innerHTML;
             } else {
-                elC.innerHTML = (valS > 0) ? `<span style="font-weight:800; font-size:10px; color:#FF453A">0 лидов</span>` : `-`;
-                elC.style.backgroundColor = '';
+                elC.innerHTML = (valS > 0) ? `<span style="color:#FF453A; font-size:10px; font-weight:800;">0 лидов</span>` : `-`;
             }
         }
         
-        // ДРР (если включен режим финансов)
-        if(elDrr) {
-            if(valRev > 0) {
-                const drr = (valS / valRev) * 100;
-                elDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NF.format(drr)}%</span>`;
-            } else { elDrr.innerText = '-'; }
+        // Рендер ДРР (без изменений)
+        const elDrr = document.getElementById(`${dayId}_drr`);
+        if(elDrr && valRev > 0) {
+            const drr = (valS / valRev) * 100;
+            elDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NF.format(drr)}%</span>`;
         }
     });
     
-    // Обновление итогов недели (Fact)
+    // Обновляем состояние итогов (код из оригинала)
     inputState[`${rowId}_c${cI}_fact_spend`] = sumS; 
     inputState[`${rowId}_c${cI}_fact_leads`] = sumL;
     inputState[`${rowId}_c${cI}_fact_revenue`] = sumRev; 
