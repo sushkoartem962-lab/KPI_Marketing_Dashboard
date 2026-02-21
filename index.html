@@ -165,8 +165,7 @@
     .badge { display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; min-width:40px; }
     .badge-neutral { color:var(--tx-sec); background:var(--badge-bg); }
     .badge-good { color:#30D158; background:rgba(48,209,88,.1); }
-    .badge-warning { color:#FFD60A; background:rgba(255,214,10,.15); }
-    .badge-bad { color:#FF453A; background:rgba(255,69,58,.1); }
+    .badge-bad { color:#FF453A; background:rgba(255,69,58,.1); }
 
     .total-card { background:var(--total-bg); border-color:rgba(255,255,255,.06); }
     .total-card .channel-table-wrap { background:var(--total-bg); }
@@ -1677,42 +1676,8 @@ function makeTotalPercCells(rowId, isFin){
 }
     function cplValue(sp, le){ sp=+sp||0; le=+le||0; return (sp>0 && le>0)?Math.round(sp/le):0; }
   function txt(id, v){ const el=document.getElementById(id); if(el) el.innerText=v; }
-function badge(id, plan, fact, invert = false) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    
-    plan = +plan || 0;
-    fact = +fact || 0;
-    
-    if (plan <= 0) {
-        el.className = 'badge badge-neutral';
-        el.innerText = '-';
-        return;
-    }
-
-    const completion = fact / plan;
-    const pShow = Math.round(completion * 100);
-    
-    // Для недель план всегда должен быть выполнен на 100% (1.0)
-    const target = 1.0; 
-    const tolerance = 0.1; // 10% погрешность для желтой зоны
-    let cls = 'badge-bad';
-
-    if (invert) {
-        // Метрики, где "Меньше = Лучше" (Расход, CPL)
-        if (completion <= target) cls = 'badge-good';
-        else if (completion <= (target + tolerance)) cls = 'badge-warning';
-        else cls = 'badge-bad';
-    } else {
-        // Метрики, где "Больше = Лучше" (Лиды, Охват)
-        if (completion >= target) cls = 'badge-good';
-        else if (completion >= (target - tolerance)) cls = 'badge-warning';
-        else cls = 'badge-bad';
-    }
-
-    el.className = `badge ${cls}`;
-    el.innerText = pShow + '%';
-}  function calcRow(id){ const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); badge(`${id}_perc_spend`,ps,fs,true); badge(`${id}_perc_leads`,pl,fl); badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true); }
+  function badge(id, plan, fact, invert=false){ const el=document.getElementById(id); if(!el) return; plan=+plan||0; fact=+fact||0; if(plan<=0){ el.className='badge badge-neutral'; el.innerText='-'; return; } const p=Math.round((fact/plan)*100); let cls='badge-neutral'; if(invert){ if(p<=100) cls='badge-good'; else cls='badge-bad'; } else { if(p>=100) cls='badge-good'; else cls='badge-bad'; } el.className=`badge ${cls}`; el.innerText=p+'%'; }
+  function calcRow(id){ const ps=inputState[`${id}_plan_spend`]||0; const pl=inputState[`${id}_plan_leads`]||0; const fs=inputState[`${id}_fact_spend`]||0; const fl=inputState[`${id}_fact_leads`]||0; txt(`${id}_plan_cpl`,fRub(cplValue(ps,pl))); txt(`${id}_fact_cpl`,fRub(cplValue(fs,fl))); badge(`${id}_perc_spend`,ps,fs,true); badge(`${id}_perc_leads`,pl,fl); badge(`${id}_perc_cpl`,cplValue(ps,pl),cplValue(fs,fl),true); }
 function calcWeekTotal(m,w){ 
     let s={ps:0,pl:0,fs:0,fl:0, fRev:0}; 
     const mI=parseInt(m.replace('m','')); 
