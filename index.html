@@ -1810,7 +1810,8 @@ function makeTotalPercCells(rowId, isFin){
   }
     // --- CALC CHANNEL GRAND (FIXED: RETURNED CPL LOGIC) ---
 function calcChannelGrand(mI,cI){ 
-      let ps=0,pl=0,fs=0,fl=0, fRev=0; 
+      const timeProgress = getMonthTimeProgress(monthsData[mI].name);
+      let ps=0,pl=0,fs=0,fl=0, fRev=0;
       const weeks=monthsData[mI].weeks; 
       
       weeks.forEach((w,wI)=>{ 
