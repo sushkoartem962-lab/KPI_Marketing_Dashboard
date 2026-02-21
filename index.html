@@ -1483,69 +1483,75 @@ function renderSMM() {
   }
   
   function calcDaysToWeek(mI, wI, cI) {
-    const month=monthsData[mI]; if(!month) return; const weekObj=month.weeks[wI]; if(typeof weekObj!=='object'||!weekObj.days) return;
-    const days=weekObj.days; const rowId=`m${mI}_w${wI}`;
+    const month = monthsData[mI]; if (!month) return;
+    const weekObj = month.weeks[wI]; if (typeof weekObj !== 'object' || !weekObj.days) return;
+    const days = weekObj.days; const rowId = `m${mI}_w${wI}`;
     
-    let sumS=0, sumL=0, sumRev=0;
+    // Получаем план на неделю для сравнения
+    const ps = inputState[rowId + '_c' + cI + '_plan_spend'] || 0;
+    const pl = inputState[rowId + '_c' + cI + '_plan_leads'] || 0;
+    const planCpl = (ps > 0 && pl > 0) ? ps / pl : 0;
+    const dayLeadTarget = (pl > 0) ? pl / days.length : 0;
+
+    let sumS = 0, sumL = 0, sumRev = 0;
     
-    days.forEach((d,dI)=>{
-        const dayId=`${rowId}_d${dI}_c${cI}`; 
-        const valS=inputState[`${dayId}_spend`]||0; 
-        const valL=inputState[`${dayId}_leads`]||0;
-        const valRev=inputState[`${dayId}_revenue`]||0; 
+    days.forEach((d, dI) => {
+        const dayId = `${rowId}_d${dI}_c${cI}`; 
+        const valS = inputState[`${dayId}_spend`] || 0; 
+        const valL = inputState[`${dayId}_leads`] || 0;
+        const valRev = inputState[`${dayId}_revenue`] || 0; 
         
-        sumS+=valS; sumL+=valL; sumRev+=valRev;
+        sumS += valS; sumL += valL; sumRev += valRev;
         
-        const elS=document.getElementById(`${dayId}_spend`); 
-        const elL=document.getElementById(`${dayId}_leads`); 
-        const elC=document.getElementById(`${dayId}_cpl`);
-        
-        const elRev = document.getElementById(`${dayId}_revenue`);
+        const elS = document.getElementById(`${dayId}_spend`); 
+        const elL = document.getElementById(`${dayId}_leads`); 
+        const elC = document.getElementById(`${dayId}_cpl`);
         const elDrr = document.getElementById(`${dayId}_drr`);
 
-        if (elS && elL) {
-            elS.style.color = ''; 
-            elL.style.color = ''; 
+        // Подсветка Лидов
+        if (elL) {
+            if (valL > 0 && dayLeadTarget > 0) {
+                elL.style.backgroundColor = valL >= dayLeadTarget ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.1)';
+                elL.style.color = valL >= dayLeadTarget ? '#30D158' : '#FF453A';
+            } else {
+                elL.style.backgroundColor = ''; elL.style.color = '';
+            }
+        }
 
-            if (elC) {
-                if (valL > 0) {
-                    const dc = Math.round(valS / valL);
-                    elC.innerHTML = `<span style="font-weight:800;">${formatMoney(dc)}</span>`;
-                } else {
-                    elC.innerHTML = (valS > 0) ? `<span style="font-weight:800; font-size:10px">0 лидов</span>` : `-`;
+        // Расчет и подсветка CPL
+        if (elC) {
+            if (valL > 0) {
+                const dc = Math.round(valS / valL);
+                let color = ''; let bg = '';
+                if (planCpl > 0) {
+                    color = dc <= planCpl ? '#30D158' : '#FF453A';
+                    bg = dc <= planCpl ? 'rgba(48, 209, 88, 0.15)' : 'rgba(255, 69, 58, 0.1)';
                 }
+                elC.innerHTML = `<span style="font-weight:800; color:${color}">${formatMoney(dc)}</span>`;
+                elC.style.backgroundColor = bg;
+            } else {
+                elC.innerHTML = (valS > 0) ? `<span style="font-weight:800; font-size:10px; color:#FF453A">0 лидов</span>` : `-`;
+                elC.style.backgroundColor = '';
             }
         }
         
+        // ДРР (если включен режим финансов)
         if(elDrr) {
             if(valRev > 0) {
                 const drr = (valS / valRev) * 100;
-                const cls = getDrrClass(drr);
-                elDrr.innerHTML = `<span class="${cls}">${NF.format(drr)}%</span>`;
-            } else {
-                elDrr.innerText = '-';
-            }
+                elDrr.innerHTML = `<span class="${getDrrClass(drr)}">${NF.format(drr)}%</span>`;
+            } else { elDrr.innerText = '-'; }
         }
     });
     
-    inputState[`${rowId}_c${cI}_fact_spend`]=sumS; 
-    inputState[`${rowId}_c${cI}_fact_leads`]=sumL;
-    inputState[`${rowId}_c${cI}_fact_revenue`]=sumRev; 
+    // Обновление итогов недели (Fact)
+    inputState[`${rowId}_c${cI}_fact_spend`] = sumS; 
+    inputState[`${rowId}_c${cI}_fact_leads`] = sumL;
+    inputState[`${rowId}_c${cI}_fact_revenue`] = sumRev; 
     
-    const wInpS=document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value=formatMoney(sumS);
-    const wInpL=document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value=formatCount(sumL);
-    const wInpRev=document.getElementById(`${rowId}_c${cI}_fact_rev`); if(wInpRev) wInpRev.value=formatMoney(sumRev);
-    
-    const wElDrr=document.getElementById(`${rowId}_c${cI}_fact_drr`);
-    if(wElDrr) {
-        if(sumRev > 0) {
-            const drr = (sumS / sumRev) * 100;
-            const cls = getDrrClass(drr);
-            wElDrr.innerHTML = `<span class="${cls}">${NF.format(drr)}%</span>`;
-        } else {
-            wElDrr.innerText = '-';
-        }
-    }
+    const wInpS = document.getElementById(`${rowId}_c${cI}_fs`); if(wInpS) wInpS.value = formatMoney(sumS);
+    const wInpL = document.getElementById(`${rowId}_c${cI}_fl`); if(wInpL) wInpL.value = formatCount(sumL);
+    const wInpRev = document.getElementById(`${rowId}_c${cI}_fact_rev`); if(wInpRev) wInpRev.value = formatMoney(sumRev);
 }
 function makeCells(rowId,cI,type, isFin){ 
     const id=`${rowId}_c${cI}`; 
