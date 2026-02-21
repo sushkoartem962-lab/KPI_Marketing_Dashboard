@@ -155,11 +155,13 @@
     .day-label-cell { padding-right:15px!important; font-size:11px; color:var(--tx-sec); font-family:monospace; }
     .day-name { color:var(--tx-accent); font-weight:700; margin-right:4px; }
 
-    .smart-input-bad { color:#FF453A!important; font-weight:800; }
-    .smart-input-good { color:#30D158!important; font-weight:800; }
-    .day-cpl-bad { color:#FF453A; font-weight:700; }
-    .day-cpl-good { color:#30D158; font-weight:700; }
-    .day-cpl-neutral { opacity:0.5; }
+.smart-input-bad { color:#FF453A!important; font-weight:800; }
+    .smart-input-good { color:#30D158!important; font-weight:800; }
+    .smart-input-warning { color:#FFD60A!important; font-weight:800; }
+    .day-cpl-bad { color:#FF453A; font-weight:700; }
+    .day-cpl-good { color:#30D158; font-weight:700; }
+    .day-cpl-warning { color:#FFD60A; font-weight:700; }
+    .day-cpl-neutral { opacity:0.5; }
     .cpl-cell { opacity:.78; font-weight:900; }
 
     .badge { display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; min-width:40px; }
@@ -1577,15 +1579,39 @@ function renderSMM() {
         const elRev = document.getElementById(`${dayId}_revenue`);
         const elDrr = document.getElementById(`${dayId}_drr`);
 
-        // Логика подсветок для обычного режима
-        if(elS && elL){
-            elS.classList.remove('smart-input-bad','smart-input-good'); elL.classList.remove('smart-input-bad','smart-input-good');
-            if(valS>0 && dayTargetS>0 && valS>dayTargetS*1.15) elS.classList.add('smart-input-bad');
-            if(planLeads>0){ if(valS>0 && valL<dayTargetL*0.8) elL.classList.add('smart-input-bad'); else if(valL>=dayTargetL) elL.classList.add('smart-input-good'); }
+       // Логика подсветок для обычного режима (Светофор по дням)
+        if (elS && elL) {
+            elS.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
+            elL.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
             
-            if(elC) { // Если мы в обычном режиме
-                if(valL>0){ const dc=Math.round(valS/valL); let cls="day-cpl-neutral"; if(targetCPL>0){ if(dc>targetCPL*1.1) cls="day-cpl-bad"; else if(dc<=targetCPL) cls="day-cpl-good"; } elC.innerHTML=`<span class="${cls}">${formatMoney(dc)}</span>`; }
-                else elC.innerHTML=(valS>0)?`<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>`:`-`;
+            // Расход: Меньше = Лучше
+            if (valS > 0 && dayTargetS > 0) {
+                if (valS <= dayTargetS) elS.classList.add('smart-input-good');
+                else if (valS <= dayTargetS * 1.1) elS.classList.add('smart-input-warning');
+                else elS.classList.add('smart-input-bad');
+            }
+
+            // Лиды: Больше = Лучше
+            if (planLeads > 0 && valS > 0) { // Проверяем, что в этот день был расход
+                if (valL >= dayTargetL) elL.classList.add('smart-input-good');
+                else if (valL >= dayTargetL * 0.9) elL.classList.add('smart-input-warning');
+                else elL.classList.add('smart-input-bad');
+            }
+
+            // CPL: Меньше = Лучше
+            if (elC) {
+                if (valL > 0) {
+                    const dc = Math.round(valS / valL);
+                    let cls = "day-cpl-neutral";
+                    if (targetCPL > 0) {
+                        if (dc <= targetCPL) cls = "day-cpl-good";
+                        else if (dc <= targetCPL * 1.1) cls = "day-cpl-warning";
+                        else cls = "day-cpl-bad";
+                    }
+                    elC.innerHTML = `<span class="${cls}">${formatMoney(dc)}</span>`;
+                } else {
+                    elC.innerHTML = (valS > 0) ? `<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>` : `-`;
+                }
             }
         }
         
