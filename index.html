@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -2253,7 +2252,7 @@ function calcSMMChannelTotal(mI, cI) {
 
                 // Для ERR цель всегда 100% (isRate=true), для остального - timeProgress
                 const target = isPct ? 1.0 : timeProgress;
-                const tolerance = 0.1; 
+                const tolerance = 0.2; 
                 let status = 'bad';
                 if (completion >= target) status = 'good';
                 else if (completion >= (target - tolerance)) status = 'warning';
