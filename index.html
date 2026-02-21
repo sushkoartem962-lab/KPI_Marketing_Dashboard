@@ -1579,37 +1579,41 @@ function renderSMM() {
         const elRev = document.getElementById(`${dayId}_revenue`);
         const elDrr = document.getElementById(`${dayId}_drr`);
 
-       // Логика подсветок для обычного режима (Светофор по дням)
+       // Логика подсветок (Светофор по дням: только Лиды и CPL)
         if (elS && elL) {
+            // 1. Сбрасываем все классы (Расход больше не красим)
             elS.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
             elL.classList.remove('smart-input-bad', 'smart-input-good', 'smart-input-warning');
-            
-            // Расход: Меньше = Лучше
-            if (valS > 0 && dayTargetS > 0) {
-                if (valS <= dayTargetS) elS.classList.add('smart-input-good');
-                else if (valS <= dayTargetS * 1.1) elS.classList.add('smart-input-warning');
-                else elS.classList.add('smart-input-bad');
+
+            // 2. Светофор для Лидов (Больше = Лучше)
+            // Условие valS > 0 нужно, чтобы пустые дни (где еще не было открута) не горели красным
+            if (planLeads > 0 && valS > 0) { 
+                if (valL >= dayTargetL) {
+                    elL.classList.add('smart-input-good');      // Зеленый: выполнили или перевыполнили норму
+                } else if (valL >= dayTargetL * 0.9) {
+                    elL.classList.add('smart-input-warning');   // Желтый: просадка не больше 10%
+                } else {
+                    elL.classList.add('smart-input-bad');       // Красный: просадка больше 10%
+                }
             }
 
-            // Лиды: Больше = Лучше
-            if (planLeads > 0 && valS > 0) { // Проверяем, что в этот день был расход
-                if (valL >= dayTargetL) elL.classList.add('smart-input-good');
-                else if (valL >= dayTargetL * 0.9) elL.classList.add('smart-input-warning');
-                else elL.classList.add('smart-input-bad');
-            }
-
-            // CPL: Меньше = Лучше
+            // 3. Светофор для CPL (Меньше = Лучше)
             if (elC) {
                 if (valL > 0) {
                     const dc = Math.round(valS / valL);
                     let cls = "day-cpl-neutral";
                     if (targetCPL > 0) {
-                        if (dc <= targetCPL) cls = "day-cpl-good";
-                        else if (dc <= targetCPL * 1.1) cls = "day-cpl-warning";
-                        else cls = "day-cpl-bad";
+                        if (dc <= targetCPL) {
+                            cls = "day-cpl-good";               // Зеленый: CPL в рамках плана или дешевле
+                        } else if (dc <= targetCPL * 1.1) {
+                            cls = "day-cpl-warning";            // Желтый: CPL дороже плана, но не более чем на 10%
+                        } else {
+                            cls = "day-cpl-bad";                // Красный: CPL дороже плана больше чем на 10%
+                        }
                     }
                     elC.innerHTML = `<span class="${cls}">${formatMoney(dc)}</span>`;
                 } else {
+                    // Если деньги потрачены (valS > 0), а лидов 0 — это красный алерт
                     elC.innerHTML = (valS > 0) ? `<span class="day-cpl-bad" style="font-size:9px">0 лидов</span>` : `-`;
                 }
             }
