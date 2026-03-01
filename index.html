@@ -352,7 +352,6 @@
         <button class="kpi-tab-btn" onclick="openTab('overview', this)">Обзор KPI</button>
         <button class="kpi-tab-btn active" onclick="openTab('traffic', this)">Traffic</button>
         <button class="kpi-tab-btn" onclick="openTab('smm', this)">SMM</button>
-        <button class="kpi-tab-btn" onclick="openTab('organic', this)">Organic</button>
       </div>
       <div class="controls-right">
         
@@ -401,14 +400,7 @@
       </div>
       <div id="smmContainer"></div>
     </div>
-<div id="organic" class="kpi-content">
-      <div style="margin-bottom:20px;display:flex;justify-content:flex-end;">
-          <button class="kpi-btn" onclick="addNewMonth()">
-            <span style="font-size:16px;">+</span> Новый месяц
-          </button>
-      </div>
-      <div id="organicContainer"></div>
-    </div>
+
     <div id="overview" class="kpi-content">
         <div class="bento-card">
             <div class="month-header">
@@ -798,7 +790,6 @@ function findErrMetricName(metrics) {
       saveStructure(); 
       renderTraffic(); 
       renderSMM(); 
-      if (typeof renderOrganic === 'function') renderOrganic(); // Сворачиваем/разворачиваем и в Organic
   }
 
   function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
@@ -847,61 +838,35 @@ function findErrMetricName(metrics) {
   }
 
   function addNewMonth(){
-    const idx = monthsData.length; 
-    const {year, monthIndex0} = nextMonthByIndex(idx);
-    const name = `${MONTHS_RU[monthIndex0]} ${year}`; 
-    const weeks = generateWeeks(year, monthIndex0);
-    
-    // 1. Дефолтные значения для всех трех вкладок
-    let lastTrafficCh = ["Яндекс Директ"];
-    let lastSmmCh = JSON.parse(JSON.stringify(DEFAULT_SMM_SETUP)); 
-    const DEFAULT_ORGANIC_SETUP = ['Яндекс', 'Google', 'Прямые заходы', 'Внутренние переходы'];
-    let lastOrganicCh = JSON.parse(JSON.stringify(DEFAULT_ORGANIC_SETUP));
+    const idx=monthsData.length; const {year,monthIndex0}=nextMonthByIndex(idx);
+    const name=`${MONTHS_RU[monthIndex0]} ${year}`; const weeks=generateWeeks(year,monthIndex0);
+    let lastTrafficCh = ["Яндекс Директ"];
+    let lastSmmCh = JSON.parse(JSON.stringify(DEFAULT_SMM_SETUP)); 
+    if (monthsData.length > 0) {
+        const prev = monthsData[monthsData.length-1];
+        if (prev.channels) lastTrafficCh = [...prev.channels];
+        if (prev.smmChannels && prev.smmChannels.length > 0) {
+            lastSmmCh = JSON.parse(JSON.stringify(prev.smmChannels));
+        }
+    }
 
-    // 2. Если есть предыдущие месяцы, копируем структуру каналов оттуда
-    if (monthsData.length > 0) {
-        const prev = monthsData[monthsData.length-1];
-        
-        if (prev.channels) {
-            lastTrafficCh = [...prev.channels];
-        }
-        if (prev.smmChannels && prev.smmChannels.length > 0) {
-            lastSmmCh = JSON.parse(JSON.stringify(prev.smmChannels));
-        }
-        // Подтягиваем органику из прошлого месяца (если она там была)
-        if (prev.organicChannels && prev.organicChannels.length > 0) {
-            lastOrganicCh = [...prev.organicChannels];
-        }
-    }
+    // --- PATCH: Добавление YouTube начиная с Марта (индекс 2) 2026 года ---
+    if (year > 2026 || (year === 2026 && monthIndex0 >= 2)) {
+        // Проверяем, нет ли уже YouTube (чтобы не дублировать, если он перенесся из прошлого месяца)
+        const hasYouTube = lastSmmCh.some(ch => ch.name.toLowerCase() === 'youtube');
+        if (!hasYouTube) {
+            lastSmmCh.push({
+                name: 'YouTube',
+                metrics: ['Просмотры', 'Чистый приток подписчиков', 'ERR']
+            });
+        }
+    }
+    // --- END PATCH ---
 
-    // 3. ПАТЧ: Добавление YouTube начиная с Марта (индекс 2) 2026 года
-    if (year > 2026 || (year === 2026 && monthIndex0 >= 2)) {
-        const hasYouTube = lastSmmCh.some(ch => ch.name.toLowerCase() === 'youtube');
-        if (!hasYouTube) {
-            lastSmmCh.push({
-                name: 'YouTube',
-                metrics: ['Просмотры', 'Чистый приток подписчиков', 'ERR']
-            });
-        }
-    }
-
-    // 4. Сохраняем все данные в общий массив, включая organicChannels
-    monthsData.push({ 
-        name: name, 
-        collapsed: false, 
-        channels: lastTrafficCh, 
-        smmChannels: lastSmmCh, 
-        organicChannels: lastOrganicCh, // Внедрение Organic
-        weeks: weeks 
-    });
-    
-    // 5. Перерисовываем интерфейс (теперь три функции рендера)
-    renderTraffic(); 
-    renderSMM(); 
-    if (typeof renderOrganic === 'function') renderOrganic(); 
-    
-    saveStructure();
-  }
+    monthsData.push({ name, collapsed: false, channels: lastTrafficCh, smmChannels: lastSmmCh, weeks });
+    renderTraffic(); renderSMM();
+    saveStructure();
+  }
 
   function _reindexState(targetType, mIdx, cIdx = -1) {
     const newState = {};
@@ -1002,7 +967,7 @@ function findErrMetricName(metrics) {
           el.value = ''; 
           inputState[id] = null; 
           db.ref('kpi_project/inputState/' + id).remove(); 
-          if(id.startsWith('smm_')) recalcSMM(id); else if(id.startsWith('org_')) recalcOrganic(id); else recalc(id);
+          if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
           return;
       }
 
@@ -1034,23 +999,18 @@ function findErrMetricName(metrics) {
             inputState[id] = val; 
             db.ref('kpi_project/inputState/' + id).set(val); 
             
-            // Распределение на перерасчет в зависимости от вкладки
-            if(id.startsWith('smm_')) recalcSMM(id); 
-            else if(id.startsWith('org_')) recalcOrganic(id); 
-            else recalc(id);
+            if(id.startsWith('smm_')) recalcSMM(id); else recalc(id);
         }
     };
     const handleFocus = (e) => { if(e.target.classList.contains('cell-input')) onCellFocus(e.target); };
     const handleBlur = (e) => { if(e.target.classList.contains('cell-input')) onCellBlur(e.target); };
 
-    ['trafficContainer', 'smmContainer', 'organicContainer'].forEach(containerId => {
-        const c = document.getElementById(containerId);
-        if(c) {
-            c.addEventListener('input', handleInput);
-            c.addEventListener('focusin', handleFocus);
-            c.addEventListener('focusout', handleBlur);
-        }
-    });
+    document.getElementById('trafficContainer').addEventListener('input', handleInput);
+    document.getElementById('trafficContainer').addEventListener('focusin', handleFocus);
+    document.getElementById('trafficContainer').addEventListener('focusout', handleBlur);
+    document.getElementById('smmContainer').addEventListener('input', handleInput);
+    document.getElementById('smmContainer').addEventListener('focusin', handleFocus);
+    document.getElementById('smmContainer').addEventListener('focusout', handleBlur);
   }
 
 function renderTraffic() {
@@ -2181,7 +2141,6 @@ function recalcAllSMM() {
       });
       recalcAll(); 
       recalcAllSMM();
-      if (typeof recalcAllOrganic === 'function') recalcAllOrganic(); // Пересчитываем органику
       renderOverview();
   }
 
@@ -2216,7 +2175,6 @@ function initFirebaseListener(callback) {
                 if (isStructureChanged || isUiChanged) {
                     renderTraffic();
                     renderSMM();
-                    if (typeof renderOrganic === 'function') renderOrganic(); // Перерисовываем органику
                 } else {
                     softUpdateUI();
                 }
@@ -2238,153 +2196,7 @@ function initFirebaseListener(callback) {
         }
     );
   }
-// ==========================================
-  // 8. ORGANIC LOGIC
-  // ==========================================
-  function toggleOrgWeek(mI, cI, wI) {
-      const key = `ui_org_week_m${mI}_c${cI}_w${wI}`;
-      inputState[key] = !inputState[key];
-      db.ref('kpi_project/inputState/' + key).set(inputState[key]);
-      renderOrganic();
-  }
-  function toggleOrgFinanceMode(mI, cI) {
-      const key = `ui_org_fin_m${mI}_c${cI}`; inputState[key] = !inputState[key];
-      db.ref('kpi_project/inputState/' + key).set(inputState[key]); renderOrganic();
-  }
-  function addOrganicChannel(mI) { const n=prompt("Название канала:"); if(n){ monthsData[mI].organicChannels.push(n); renderOrganic(); saveStructure(); } }
-  function deleteOrganicChannel(mI, cI) { if(confirm("Удалить канал?")){ monthsData[mI].organicChannels.splice(cI,1); renderOrganic(); saveStructure(); } }
 
-  function makeOrgCells(rowId, cI, type, isFin) {
-      const id = `${rowId}_c${cI}`;
-      const vVisits = inputState[`${id}_${type}_visits`] || '';
-      const vLeads = inputState[`${id}_${type}_leads`] || '';
-      
-      if (isFin) {
-          const vRev = inputState[`${id}_${type}_revenue`] || '';
-          const ro = type === 'plan' ? 'disabled style="opacity:0.3"' : '';
-          return `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_visits" data-kind="count" value="${formatCount(vVisits)}" placeholder="-"></td>
-                  <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vLeads)}" placeholder="-"></td>
-                  <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_revenue" data-kind="money" value="${formatMoney(vRev)}" placeholder="-" ${ro}></td>`;
-      } else {
-          return `<td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_visits" data-kind="count" value="${formatCount(vVisits)}" placeholder="-"></td>
-                  <td><input type="text" inputmode="numeric" class="cell-input" data-id="${id}_${type}_leads" data-kind="count" value="${formatCount(vLeads)}" placeholder="-"></td>
-                  <td class="cpl-cell" id="${id}_${type}_cr">-</td>`;
-      }
-  }
-
-  function renderOrganic() {
-      _smartRenderList('organicContainer', monthsData, 'org', (month, mIndex) => {
-          const chs = month.organicChannels || [];
-          let html = `<div class="card-top"><div class="month-header"><div class="month-title" onclick="toggleMonth(${mIndex})">${month.name} <span style="font-size:12px;opacity:0.5;margin-left:5px;">${month.collapsed?'▼':'▲'}</span></div>
-          <div style="display:flex;gap:10px;"><button class="kpi-btn" onclick="addOrganicChannel(${mIndex})">+ Канал</button><button class="kpi-btn btn-delete" onclick="deleteMonth(${mIndex})">Удалить</button></div></div>
-          
-          <div class="stats-grid">
-             <div class="stat-box"><div class="stat-label">Переходы (Факт/План)</div><div class="stat-val"><span id="org_m${mIndex}_stat_fv">-</span> / <span id="org_m${mIndex}_stat_pv" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="org_m${mIndex}_stat_percv">0%</div></div>
-             <div class="stat-box"><div class="stat-label">Лиды (Факт/План)</div><div class="stat-val"><span id="org_m${mIndex}_stat_fl" class="accent-text">-</span> / <span id="org_m${mIndex}_stat_pl" style="opacity:.6;font-size:14px">-</span></div><div class="stat-sub" id="org_m${mIndex}_stat_percl">0%</div></div>
-             <div class="stat-box"><div class="stat-label">Конверсия (CR)</div><div class="stat-val"><span id="org_m${mIndex}_stat_fcr">-</span></div></div>
-             <div class="stat-box"><div class="stat-label">Выручка</div><div class="stat-val" id="org_m${mIndex}_stat_rev">-</div></div>
-          </div></div>
-          
-          <div class="traffic-month-body" style="${month.collapsed?'display:none':''}"><div class="channel-bento-grid">`;
-
-          chs.forEach((ch, cI) => {
-              const isFin = !!inputState[`ui_org_fin_m${mIndex}_c${cI}`];
-              const finBtnClass = isFin ? 'finance-active' : '';
-
-              html += `<div class="channel-card"><div class="channel-header"><div><div class="channel-name">${ch} <span class="delete-ch-btn" onclick="deleteOrganicChannel(${mIndex},${cI})">×</span></div>
-              <div class="mini-grid">
-                  <div class="mini-chip">Переходы: <strong><span id="org_m${mIndex}_c${cI}_mini_fv">-</span></strong><span class="mini-plan" id="org_m${mIndex}_c${cI}_mini_pv">/ -</span></div>
-                  <div class="mini-chip">Лиды: <strong><span id="org_m${mIndex}_c${cI}_mini_fl">-</span></strong><span class="mini-plan" id="org_m${mIndex}_c${cI}_mini_pl">/ -</span></div>
-                  <div class="mini-chip">Конверсия: <strong><span id="org_m${mIndex}_c${cI}_mini_fcr">-</span></strong></div>
-                  <div class="mini-chip">Выручка: <strong><span id="org_m${mIndex}_c${cI}_mini_rev">-</span></strong></div>
-              </div></div>
-              <button class="kpi-btn ${finBtnClass}" style="margin-left:auto; font-size:11px; padding:4px 10px;" onclick="toggleOrgFinanceMode(${mIndex}, ${cI})">Финансы</button>
-              </div>
-              
-              <div class="channel-table-wrap"><table class="channel-table"><thead><tr><th class="col-sticky-1">Период</th><th class="col-type">Тип</th><th>Переходы</th><th>Лиды</th>
-              <th>${isFin ? 'Выручка' : 'CR %'}</th></tr></thead><tbody>`;
-
-              month.weeks.forEach((weekObj, wI) => {
-                  const rowId = `org_m${mIndex}_w${wI}`; 
-                  const collapsed = !!inputState[`ui_org_week_m${mIndex}_c${cI}_w${wI}`];
-                  const caret = collapsed ? '▸' : '▾';
-
-                  html += `<tr class="week-head"><td class="col-sticky-1"><div class="week-header-inner"><button class="tree-toggle-btn" onclick="toggleOrgWeek(${mIndex},${cI},${wI})">${caret}</button><div class="week-title-text" style="pointer-events:none">${weekObj.title}</div></div></td><td class="col-type" style="border-bottom:1px solid var(--bd-color)"></td><td colspan="3" style="border-bottom:1px solid var(--bd-color)"></td></tr>
-                  <tr class="${collapsed?'week-collapsed':''}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="opacity:.65;font-weight:800;">ПЛАН</td>${makeOrgCells(rowId, cI, 'plan', isFin)}</tr>
-                  <tr class="${collapsed?'week-collapsed':''}"><td class="col-sticky-1" style="border-bottom:none"></td><td class="col-type" style="font-weight:900;">ФАКТ</td>${makeOrgCells(rowId, cI, 'fact', isFin)}</tr>
-                  <tr class="${collapsed?'week-collapsed':''}"><td class="col-sticky-1"></td><td class="col-type" style="font-weight:900;">%</td>
-                  <td><div id="${rowId}_c${cI}_perc_visits" class="badge badge-neutral">-</div></td><td><div id="${rowId}_c${cI}_perc_leads" class="badge badge-neutral">-</div></td><td></td></tr>
-                  <tr class="row-spacer ${collapsed?'week-collapsed':''}"><td colspan="5"></td></tr>`;
-              });
-              html += `</tbody></table></div></div>`;
-          });
-          html += `</div></div></div>`;
-          return html;
-      });
-      recalcAllOrganic();
-  }
-
-  function recalcOrganic(id) {
-      const parts=id.split('_'); let mI=-1,wI=-1,cI=-1;
-      const mKey=parts.find(p=>p.startsWith('m')); const wKey=parts.find(p=>p.startsWith('w')); const cKey=parts.find(p=>p.startsWith('c'));
-      if(mKey) mI=parseInt(mKey.replace('m','')); if(wKey) wI=parseInt(wKey.replace('w','')); if(cKey) cI=parseInt(cKey.replace('c',''));
-      
-      if(mI>=0 && wI>=0 && cI>=0) {
-          const rowId = `org_m${mI}_w${wI}_c${cI}`;
-          const pV = inputState[`${rowId}_plan_visits`] || 0; const pL = inputState[`${rowId}_plan_leads`] || 0;
-          const fV = inputState[`${rowId}_fact_visits`] || 0; const fL = inputState[`${rowId}_fact_leads`] || 0;
-          
-          const crPlan = pV > 0 ? (pL / pV * 100) : 0;
-          const crFact = fV > 0 ? (fL / fV * 100) : 0;
-          
-          if(document.getElementById(`${rowId}_plan_cr`)) document.getElementById(`${rowId}_plan_cr`).innerText = crPlan > 0 ? NFP.format(crPlan) + '%' : '-';
-          if(document.getElementById(`${rowId}_fact_cr`)) {
-              document.getElementById(`${rowId}_fact_cr`).innerHTML = `<span class="badge ${crFact >= crPlan && crFact > 0 ? 'badge-good' : (crFact > 0 ? 'badge-warning' : 'badge-neutral')}">${crFact > 0 ? NFP.format(crFact) + '%' : '-'}</span>`;
-          }
-          badge(`${rowId}_perc_visits`, pV, fV);
-          badge(`${rowId}_perc_leads`, pL, fL);
-
-          // Обновление итогов канала
-          let totPV = 0, totPL = 0, totFV = 0, totFL = 0, totRev = 0;
-          monthsData[mI].weeks.forEach((w, wIdx) => {
-              const rId = `org_m${mI}_w${wIdx}_c${cI}`;
-              totPV += inputState[`${rId}_plan_visits`] || 0; totPL += inputState[`${rId}_plan_leads`] || 0;
-              totFV += inputState[`${rId}_fact_visits`] || 0; totFL += inputState[`${rId}_fact_leads`] || 0;
-              totRev += inputState[`${rId}_fact_revenue`] || 0;
-          });
-          txt(`org_m${mI}_c${cI}_mini_fv`, fCount(totFV)); txt(`org_m${mI}_c${cI}_mini_pv`, "/ " + fCount(totPV));
-          txt(`org_m${mI}_c${cI}_mini_fl`, fCount(totFL)); txt(`org_m${mI}_c${cI}_mini_pl`, "/ " + fCount(totPL));
-          txt(`org_m${mI}_c${cI}_mini_fcr`, totFV > 0 ? NFP.format((totFL/totFV)*100) + '%' : '-');
-          txt(`org_m${mI}_c${cI}_mini_rev`, fRub(totRev));
-
-          // Обновление гранд-итогов месяца
-          let grandPV = 0, grandPL = 0, grandFV = 0, grandFL = 0, grandRev = 0;
-          (monthsData[mI].organicChannels || []).forEach((ch, chIdx) => {
-              monthsData[mI].weeks.forEach((w, wIdx) => {
-                  const rId = `org_m${mI}_w${wIdx}_c${chIdx}`;
-                  grandPV += inputState[`${rId}_plan_visits`] || 0; grandPL += inputState[`${rId}_plan_leads`] || 0;
-                  grandFV += inputState[`${rId}_fact_visits`] || 0; grandFL += inputState[`${rId}_fact_leads`] || 0;
-                  grandRev += inputState[`${rId}_fact_revenue`] || 0;
-              });
-          });
-          txt(`org_m${mI}_stat_pv`, fCount(grandPV)); txt(`org_m${mI}_stat_fv`, fCount(grandFV));
-          txt(`org_m${mI}_stat_pl`, fCount(grandPL)); txt(`org_m${mI}_stat_fl`, fCount(grandFL));
-          txt(`org_m${mI}_stat_rev`, fRub(grandRev));
-          txt(`org_m${mI}_stat_fcr`, grandFV > 0 ? NFP.format((grandFL/grandFV)*100) + '%' : '-');
-          
-          const timeP = getMonthTimeProgress(monthsData[mI].name);
-          renderDev(document.getElementById(`org_m${mI}_stat_percv`), grandPV, grandFV, false, timeP, false);
-          renderDev(document.getElementById(`org_m${mI}_stat_percl`), grandPL, grandFL, false, timeP, false);
-      }
-  }
-
-  function recalcAllOrganic() {
-      monthsData.forEach((m, mI) => {
-          (m.organicChannels || []).forEach((c, cI) => {
-              m.weeks.forEach((w, wI) => { recalcOrganic(`org_m${mI}_w${wI}_c${cI}_fact_visits`); });
-          });
-      });
-  }
   // ==========================================
   // INITIALIZATION
   // ==========================================
