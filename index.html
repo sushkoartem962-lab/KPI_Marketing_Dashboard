@@ -542,10 +542,10 @@
   const auth = firebase.auth(); 
 
   const AVAILABLE_METRICS = [
-      "Охват", "Посещения профиля", "Чистый приток подписчиков",
-      "Клики по ссылке", "Лиды", "ERR",
-      "Просмотры постов", "Показы", "% Дочитывания и просмотров", "Кол-во реакций"
-  ];
+      "Охват", "Посещения профиля", "Чистый приток подписчиков",
+      "Клики по ссылке", "Лиды", "ERR",
+      "Просмотры постов", "Показы", "% Дочитывания и просмотров", "Кол-во реакций", "Просмотры"
+  ];
 
   const DEFAULT_SMM_SETUP = [
     { name: 'Instagram', metrics: ['Охват', 'Посещения профиля', 'Чистый приток подписчиков', 'Клики по ссылке', 'Лиды', 'ERR'] },
@@ -838,21 +838,35 @@ function findErrMetricName(metrics) {
   }
 
   function addNewMonth(){
-    const idx=monthsData.length; const {year,monthIndex0}=nextMonthByIndex(idx);
-    const name=`${MONTHS_RU[monthIndex0]} ${year}`; const weeks=generateWeeks(year,monthIndex0);
-    let lastTrafficCh = ["Яндекс Директ"];
-    let lastSmmCh = JSON.parse(JSON.stringify(DEFAULT_SMM_SETUP)); 
-    if (monthsData.length > 0) {
-        const prev = monthsData[monthsData.length-1];
-        if (prev.channels) lastTrafficCh = [...prev.channels];
-        if (prev.smmChannels && prev.smmChannels.length > 0) {
-            lastSmmCh = JSON.parse(JSON.stringify(prev.smmChannels));
-        }
-    }
-    monthsData.push({ name, collapsed: false, channels: lastTrafficCh, smmChannels: lastSmmCh, weeks });
-    renderTraffic(); renderSMM();
-    saveStructure();
-  }
+    const idx=monthsData.length; const {year,monthIndex0}=nextMonthByIndex(idx);
+    const name=`${MONTHS_RU[monthIndex0]} ${year}`; const weeks=generateWeeks(year,monthIndex0);
+    let lastTrafficCh = ["Яндекс Директ"];
+    let lastSmmCh = JSON.parse(JSON.stringify(DEFAULT_SMM_SETUP)); 
+    if (monthsData.length > 0) {
+        const prev = monthsData[monthsData.length-1];
+        if (prev.channels) lastTrafficCh = [...prev.channels];
+        if (prev.smmChannels && prev.smmChannels.length > 0) {
+            lastSmmCh = JSON.parse(JSON.stringify(prev.smmChannels));
+        }
+    }
+
+    // --- PATCH: Добавление YouTube начиная с Марта (индекс 2) 2026 года ---
+    if (year > 2026 || (year === 2026 && monthIndex0 >= 2)) {
+        // Проверяем, нет ли уже YouTube (чтобы не дублировать, если он перенесся из прошлого месяца)
+        const hasYouTube = lastSmmCh.some(ch => ch.name.toLowerCase() === 'youtube');
+        if (!hasYouTube) {
+            lastSmmCh.push({
+                name: 'YouTube',
+                metrics: ['Просмотры', 'Чистый приток подписчиков', 'ERR']
+            });
+        }
+    }
+    // --- END PATCH ---
+
+    monthsData.push({ name, collapsed: false, channels: lastTrafficCh, smmChannels: lastSmmCh, weeks });
+    renderTraffic(); renderSMM();
+    saveStructure();
+  }
 
   function _reindexState(targetType, mIdx, cIdx = -1) {
     const newState = {};
